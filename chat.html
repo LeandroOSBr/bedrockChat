@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat com IA - Aula de Cloud Computing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #chat-container {
+            width: 600px;
+            height: 80vh;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #fff;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        #chat-header {
+            padding: 15px;
+            background-color: #007bff;
+            color: white;
+            font-size: 1.2em;
+            text-align: center;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+        #messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-bottom: 1px solid #ddd;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            max-width: 80%;
+            line-height: 1.4;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        .ia-message {
+            background-color: #e9e9eb;
+            color: #333;
+            align-self: flex-start;
+        }
+        #input-area {
+            display: flex;
+            padding: 10px;
+        }
+        #message-input {
+            flex-grow: 1;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            padding: 10px 15px;
+            font-size: 1em;
+        }
+        #send-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 1.5em;
+        }
+        .thinking {
+            color: #888;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <div id="chat-header">Demonstração de Segurança em IA</div>
+    <div id="messages">
+        <div class="message ia-message">Olá! Sou um modelo de IA base. Pergunte-me qualquer coisa para começarmos.</div>
+    </div>
+    <div id="input-area">
+        <input type="text" id="message-input" placeholder="Digite sua mensagem...">
+        <button id="send-button">→</button>
+    </div>
+</div>
+
+<script>
+    // #######################################################################
+    // # COLE A URL DO SEU API GATEWAY AQUI                                  #
+    // #######################################################################
+    // const API_ENDPOINT = 'https://bxzpgx5bvf.execute-api.us-east-1.amazonaws.com/default/bedrockChatFunction/chat'; 
+	// const API_ENDPOINT = 'https://bxzpgx5bvf.execute-api.us-east-1.amazonaws.com/default/chat'
+	//const API_ENDPOINT = 'https://jq5ekc93u7.execute-api.us-east-2.amazonaws.com/default/bedrockChatFunction'
+	const API_ENDPOINT = 'https://0219idbg96.execute-api.us-east-1.amazonaws.com/default/bedrockChatFunction'
+    // #######################################################################
+
+    const messagesContainer = document.getElementById('messages');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+
+    // Função para adicionar mensagem na tela
+    function addMessage(text, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', sender === 'user' ? 'user-message' : 'ia-message');
+        messageDiv.textContent = text;
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Rola para a mensagem mais recente
+    }
+    
+    // Função principal para enviar a mensagem
+    async function sendMessage() {
+        const userMessage = messageInput.value.trim();
+        if (userMessage === '') return;
+
+        addMessage(userMessage, 'user');
+        messageInput.value = '';
+        
+        // Adiciona um indicador de "pensando..."
+        const thinkingDiv = document.createElement('div');
+        thinkingDiv.classList.add('message', 'ia-message', 'thinking');
+        thinkingDiv.textContent = 'Pensando...';
+        messagesContainer.appendChild(thinkingDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: userMessage }),
+            });
+
+            // Remove o indicador de "pensando..."
+            messagesContainer.removeChild(thinkingDiv);
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
+            }
+
+            const data = await response.json();
+            addMessage(data.response.trim(), 'ia');
+
+        } catch (error) {
+            // Remove o indicador de "pensando..." caso ainda exista
+            if (document.contains(thinkingDiv)) {
+                messagesContainer.removeChild(thinkingDiv);
+            }
+            console.error('Erro ao enviar mensagem:', error);
+            addMessage(`Desculpe, ocorreu um erro: ${error.message}`, 'ia');
+        }
+    }
+
+    // Event Listeners
+    sendButton.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+</script>
+
+</body>
+</html>
