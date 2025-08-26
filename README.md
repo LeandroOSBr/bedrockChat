@@ -237,7 +237,7 @@ Este projeto demonstra como criar um sistema de chat com IA usando AWS Bedrock, 
 - **IMPORTANTE**: Abaixo do "/[NOME DA FUNÇÃO]", agora estará o "OPTIONS e o "POST". Observe que a direite, em "Detalhes da rota" quando a rota "POST" estiver selecionada, será apresentada uma integração. Ao selecionar a rota "OPTIONS", no lugar do nome da integração estará o texto "Nenhuma integração anexada a essa rota.". Isso é para que quando o método for "POST", a requisição deverá ser enviada à função Lamda. Caso o método seja "OPTIONS", o próprio API Gateway é quem irá responder;
 
 
-#### 5.2 Testar o Sistema
+#### 5.4 Testar o Sistema
 - Assegure que o modelo que você solicitou autorização de acesso, esteja disponível;
 - **TESTE** o sistema:
   - Acesse a URL do seu site S3 (que você copiou no passo 4.3)
