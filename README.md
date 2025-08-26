@@ -22,6 +22,7 @@ Este projeto demonstra como criar um sistema de chat com IA usando AWS Bedrock, 
 
 - Conta AWS ativa
 - Logado com usuário **root**
+- Região escolhida **Norte da Virgínia us-east-1**
 - Acesso ao serviço AWS Bedrock
 - Conhecimento básico de Python e HTML/JavaScript
 
@@ -74,20 +75,6 @@ Este projeto demonstra como criar um sistema de chat com IA usando AWS Bedrock, 
 - Você verá a mensagem "Êxito ao anexar a política ao perfil."
 - **VOLTE** para a aba do Lambda (não feche a aba do IAM ainda)
 
-```json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "bedrock:InvokeModel"
-            ],
-            "Resource": "*"
-        }
-    ]
-}
-```
 
 #### 2.3 Configurar Timeout
 - Na aba do Lambda, clique na aba **Configuração** (se não estiver selecionada)
