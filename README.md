@@ -5,6 +5,8 @@ strong { color: orange; }
 
 ## 📚 Visão Geral
 
+<span style="color:#FF8C00">Laranja Escuro</span>
+
 Este projeto demonstra como criar um sistema de chat com IA usando AWS Bedrock, Lambda, API Gateway e S3. É uma excelente oportunidade para praticar conceitos de Cloud Computing e Segurança de Aplicações de IA.
 
 ## 🎯 Objetivos de Aprendizagem
