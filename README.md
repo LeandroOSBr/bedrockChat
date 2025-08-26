@@ -270,8 +270,8 @@ Este projeto demonstra como criar um sistema de chat com IA usando AWS Bedrock, 
 ## 🚨 Solução de Problemas Comuns
 
 ### ❌ Erro: CORS no Frontend
-**O que significa**: O navegador bloqueia a comunicação entre o site e a API
-**Como identificar**: Mensagem de erro no console do navegador (F12)
+**O que significa**: O navegador bloqueia a comunicação entre o site e a API <br>
+**Como identificar**: Mensagem de erro no console do navegador (F12) <br>
 **Como resolver**:
 1. Verifique se o CORS está habilitado no API Gateway
 2. Confirme se a URL da API no arquivo `chat.html` está correta
