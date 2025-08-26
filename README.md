@@ -1,6 +1,3 @@
-<style>
-strong { color: orange; }
-</style>
 # 🚀 Projeto: Chat com IA usando AWS Bedrock
 
 ## 📚 Visão Geral
