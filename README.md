@@ -32,6 +32,7 @@ Este projeto demonstra como criar um sistema de chat com IA usando AWS Bedrock, 
 
 #### 1.1 Acessar o Console AWS Bedrock
 - Faça login no [Console AWS](https://console.aws.amazon.com/)
+- Escolha a região no canto superior direito, ao lado de "ID da conta", como sendo **Norte da Virgínia us-east-1**
 - No console, procure por **Bedrock** na barra de pesquisa (digite "bedrock")
 - Clique no serviço **Amazon Bedrock** quando aparecer
 - **IMPORTANTE**: Solicite acesso aos modelos Anthropic (Claude)
