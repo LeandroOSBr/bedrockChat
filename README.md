@@ -1,3 +1,6 @@
+<style>
+strong { color: orange; }
+</style>
 # 🚀 Projeto: Chat com IA usando AWS Bedrock
 
 ## 📚 Visão Geral
@@ -251,7 +254,7 @@ Este projeto demonstra como criar um sistema de chat com IA usando AWS Bedrock, 
 ## 📋 Resumo dos Passos Realizados
 
 ### ✅ O que você acabou de configurar:
-1. **AWS Bedrock** - Serviço de IA (aguardando aprovação)
+1. <span style="color:orange">**AWS Bedrock**</span> - Serviço de IA (aguardando aprovação)
 2. **Lambda Function** - Função que processa as mensagens
 3. **Gatilho HTTP** - Interface para receber requisições via API Gateway
 4. **S3 Bucket** - Site estático para o chat
