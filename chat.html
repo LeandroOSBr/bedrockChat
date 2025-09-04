@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat com IA - Aula de Cloud Computing</title>
+    <title>Chat com IA - Aula de Segurança</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -26,7 +26,7 @@
         }
         #chat-header {
             padding: 15px;
-            background-color: #007bff;
+            background-color: #4A90E2;
             color: white;
             font-size: 1.2em;
             text-align: center;
@@ -37,7 +37,6 @@
             flex-grow: 1;
             padding: 20px;
             overflow-y: auto;
-            border-bottom: 1px solid #ddd;
         }
         .message {
             margin-bottom: 15px;
@@ -45,9 +44,11 @@
             border-radius: 20px;
             max-width: 80%;
             line-height: 1.4;
+            display: flex;
+            flex-direction: column;
         }
         .user-message {
-            background-color: #007bff;
+            background-color: #4A90E2;
             color: white;
             align-self: flex-end;
             margin-left: auto;
@@ -57,9 +58,16 @@
             color: #333;
             align-self: flex-start;
         }
+        #controls {
+            padding: 0px 15px 10px 15px;
+            display: flex;
+            align-items: center;
+            font-size: 0.9em;
+        }
         #input-area {
             display: flex;
             padding: 10px;
+            border-top: 1px solid #ddd;
         }
         #message-input {
             flex-grow: 1;
@@ -69,7 +77,7 @@
             font-size: 1em;
         }
         #send-button {
-            background-color: #007bff;
+            background-color: #4A90E2;
             color: white;
             border: none;
             border-radius: 50%;
@@ -90,7 +98,11 @@
 <div id="chat-container">
     <div id="chat-header">Demonstração de Segurança em IA</div>
     <div id="messages">
-        <div class="message ia-message">Olá! Sou um modelo de IA base. Pergunte-me qualquer coisa para começarmos.</div>
+        <div class="message ia-message">Olá! Sou um assistente de IA. Use a opção abaixo para ativar ou desativar a proteção do Guardrail.</div>
+    </div>
+    <div id="controls">
+        <input type="checkbox" id="guardrail-checkbox" checked>
+        <label for="guardrail-checkbox">Utilizar Guardrail</label>
     </div>
     <div id="input-area">
         <input type="text" id="message-input" placeholder="Digite sua mensagem...">
@@ -99,42 +111,36 @@
 </div>
 
 <script>
-    // #######################################################################
-    // # COLE A URL DO SEU API GATEWAY AQUI                                  #
-    // #######################################################################
-    // const API_ENDPOINT = 'https://bxzpgx5bvf.execute-api.us-east-1.amazonaws.com/default/bedrockChatFunction/chat'; 
-	// const API_ENDPOINT = 'https://bxzpgx5bvf.execute-api.us-east-1.amazonaws.com/default/chat'
-	//const API_ENDPOINT = 'https://jq5ekc93u7.execute-api.us-east-2.amazonaws.com/default/bedrockChatFunction'
-	const API_ENDPOINT = 'https://0219idbg96.execute-api.us-east-1.amazonaws.com/default/bedrockChatFunction'
-    // #######################################################################
+    const API_ENDPOINT = 'https://0219idbg96.execute-api.us-east-1.amazonaws.com/default/bedrockChatFunction' 
 
     const messagesContainer = document.getElementById('messages');
     const messageInput = document.getElementById('message-input');
     const sendButton = document.getElementById('send-button');
+    // NOVA LINHA: Referência para o checkbox
+    const guardrailCheckbox = document.getElementById('guardrail-checkbox');
 
-    // Função para adicionar mensagem na tela
     function addMessage(text, sender) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', sender === 'user' ? 'user-message' : 'ia-message');
         messageDiv.textContent = text;
         messagesContainer.appendChild(messageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Rola para a mensagem mais recente
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
     
-    // Função principal para enviar a mensagem
     async function sendMessage() {
         const userMessage = messageInput.value.trim();
         if (userMessage === '') return;
-
         addMessage(userMessage, 'user');
         messageInput.value = '';
         
-        // Adiciona um indicador de "pensando..."
         const thinkingDiv = document.createElement('div');
         thinkingDiv.classList.add('message', 'ia-message', 'thinking');
         thinkingDiv.textContent = 'Pensando...';
         messagesContainer.appendChild(thinkingDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        // NOVA LINHA: Verifica o estado do checkbox
+        const useGuardrail = guardrailCheckbox.checked;
 
         try {
             const response = await fetch(API_ENDPOINT, {
@@ -142,38 +148,27 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message: userMessage }),
+                // PAYLOAD ATUALIZADO para incluir a flag
+                body: JSON.stringify({ 
+                    message: userMessage,
+                    useGuardrail: useGuardrail 
+                }),
             });
 
-            // Remove o indicador de "pensando..."
             messagesContainer.removeChild(thinkingDiv);
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
-            }
-
+            if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
             const data = await response.json();
             addMessage(data.response.trim(), 'ia');
-
         } catch (error) {
-            // Remove o indicador de "pensando..." caso ainda exista
-            if (document.contains(thinkingDiv)) {
-                messagesContainer.removeChild(thinkingDiv);
-            }
-            console.error('Erro ao enviar mensagem:', error);
+            if (document.contains(thinkingDiv)) messagesContainer.removeChild(thinkingDiv);
             addMessage(`Desculpe, ocorreu um erro: ${error.message}`, 'ia');
         }
     }
 
-    // Event Listeners
     sendButton.addEventListener('click', sendMessage);
     messageInput.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') {
-            sendMessage();
-        }
+        if (event.key === 'Enter') sendMessage();
     });
-
 </script>
 
 </body>
