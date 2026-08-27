@@ -46,46 +46,73 @@
 
 ---
 
-### 2. Criar e Configurar a Função Lambda
-1. No console AWS, acesse o serviço **AWS Lambda** e clique em **Criar função**.
-2. Selecione **Criar do zero**:
-   - **Nome da função:** `bedrockChatFunction`
-   - **Runtime:** `Python 3.12`
-   - **Arquitetura:** `x86_64`
-   - **Permissões:** `Criar uma nova função com permissões básicas do Lambda`
-3. Clique em **Criar função**.
+### 2. Criar e Configurar a Função Lambda (AWS Lambda)
 
-#### 2.1 Anexar Permissões do Bedrock à IAM Role
-1. Na aba **Configuração** > **Permissões**, clique no nome da role (perfil de execução).
-2. Na aba do IAM, clique em **Adicionar permissões** > **Anexar políticas**.
-3. Procure por `AmazonBedrockFullAccess` e anexe à role.
-
-#### 2.2 Ajustar Timeout
-1. Na aba **Configuração** > **Configuração geral** > **Editar**:
-   - Altere o **Tempo limite (Timeout)** de `3s` para `1 min e 30s`.
-2. Clique em **Salvar**.
-
-#### 2.3 Upload do Código
-1. Na aba **Código**, abra o editor e substitua o conteúdo do arquivo pelo código de `bedrockChatFunction.py`.
-2. Clique no botão **Deploy**.
+1. No console AWS, acesse o serviço **Lambda** (certifique-se de estar na região `us-east-1` / N. Virginia).
+2. Na página inicial de **Functions**, clique no botão laranja **Create function** (Criar função) no canto superior direito.
+3. Na tela de criação:
+   - Selecione a opção padrão: **Author from scratch** (Criar do zero).
+   - **Function name (Nome da função):** Digite exatamente `bedrockChatFunction` (sem espaços).
+   - **Runtime (Tempo de execução):** Selecione `Python 3.12`.
+   - **Architecture (Arquitetura):** Mantenha `x86_64`.
+   - **Change default execution role (Permissões):** Mantenha a opção padrão marcada: *Create a new role with basic Lambda permissions* (Criar uma nova função com permissões básicas).
+4. Role até o final da página e clique no botão laranja **Create function** (Criar função). Aguarde a mensagem de confirmação.
 
 ---
 
-### 3. Configurar o API Gateway (HTTP API)
-1. Na tela da função Lambda, na seção *Visão geral da função*, clique em **+ Adicionar gatilho**.
-2. Em **Origem**, selecione **API Gateway**:
-   - **Intenção:** `Criar uma API`
-   - **Tipo de API:** `API HTTP`
-   - **Segurança:** `Aberta` (Open)
-3. Clique em **Adicionar** e copie o **Endpoint de API** gerado (ex: `https://xxxx.execute-api.us-east-1.amazonaws.com/default/bedrockChatFunction`).
+#### 2.1 Anexar Permissões do Bedrock à IAM Execution Role
+1. Na página da função `bedrockChatFunction`, clique na aba **Configuration** (Configuração).
+2. No menu lateral esquerdo, clique em **Permissions** (Permissões).
+3. Na seção **Execution role** (Papel de execução), clique no link azul com o nome da role gerada (ex: `bedrockChatFunction-role-xxxx`). Isso abrirá o console do **IAM** em uma nova aba.
+4. Na aba do IAM que abriu:
+   - Clique no botão **Add permissions** (Adicionar permissões) > selecione **Attach policies** (Anexar políticas).
+   - Na barra de busca, digite `AmazonBedrockFullAccess` e marque a caixa de seleção ao lado dela.
+   - Clique no botão laranja **Add permissions** (Adicionar permissões) no canto inferior direito.
+5. Feche a aba do IAM e retorne à aba da sua função Lambda.
 
-#### 3.1 Configurar CORS no API Gateway
-1. No serviço **API Gateway**, acesse a API criada.
-2. No menu lateral, clique em **CORS** > **Configurar**:
+---
+
+#### 2.2 Ajustar o Timeout (Tempo Limite)
+1. Na aba **Configuration** (Configuração) da função Lambda:
+2. No menu lateral esquerdo, clique em **General configuration** (Configuração geral).
+3. Clique no botão **Edit** (Editar).
+4. Na seção **Timeout** (Tempo limite), altere de `3 sec` (padrão) para **`1 min 30 sec`** (necessário para inferências de IA sem corte abrupto).
+5. Clique no botão laranja **Save** (Salvar).
+
+---
+
+#### 2.3 Upload do Código Python
+1. Na função Lambda, clique na aba **Code** (Código) no menu superior.
+2. No painel do editor de código, você verá o arquivo `lambda_function.py`.
+3. Apague todo o código de exemplo e cole o conteúdo completo do arquivo [`bedrockChatFunction.py`](../bedrockChatFunction.py).
+4. Clique no botão **Deploy** (botão azul na barra de ferramentas do editor de código).
+5. Aguarde a mensagem verde indicando que o deploy foi realizado com sucesso.
+
+---
+
+### 3. Configurar o Gatilho HTTP (API Gateway)
+
+#### 3.1 Adicionar Trigger na Função Lambda
+1. Na página da função Lambda, na seção **Function overview** (Visão geral da função) no topo, clique no botão **+ Add trigger** (+ Adicionar gatilho).
+2. No formulário de configuração do gatilho:
+   - **Select a source (Selecione uma origem):** Escolha **API Gateway**.
+   - **Intent (Intenção):** Selecione **Create a new API** (Criar uma API).
+   - **API type (Tipo de API):** Selecione **HTTP API**.
+   - **Security (Segurança):** Selecione **Open** (Aberta - sem autenticação para fins de laboratório).
+3. Clique no botão laranja **Add** (Adicionar).
+4. Na seção *Triggers* (Gatilhos), localize o **API Gateway** recém-criado e **COPIE o Endpoint de API** (ex: `https://xxxxxxxx.execute-api.us-east-1.amazonaws.com/default/bedrockChatFunction`). Guarde este link!
+
+---
+
+#### 3.2 Configurar CORS no API Gateway
+1. No console AWS, acesse o serviço **API Gateway** (ou clique no link da API no gatilho).
+2. Clique no nome da API criada (algo como `bedrockChatFunction-API`).
+3. No menu lateral esquerdo, na seção *Develop*, clique em **CORS**:
+4. Clique no botão **Configure** (Configurar) e preencha:
    - **Access-Control-Allow-Origin:** `*`
    - **Access-Control-Allow-Headers:** `content-type,authorization,x-amz-date,x-api-key,x-amz-security-token`
-   - **Access-Control-Allow-Methods:** `POST, OPTIONS`
-3. Clique em **Salvar**.
+   - **Access-Control-Allow-Methods:** Marque `POST` e `OPTIONS`.
+5. Clique no botão laranja **Save** (Salvar).
 
 ---
 
