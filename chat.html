@@ -638,32 +638,49 @@ Configurações e Metadados Internos do Sistema:
     }
 
     async function checkGuardrailStandalone(text, source, apiEndpoint, guardrailId, guardrailVersion) {
-        try {
-            const res = await fetch(apiEndpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    checkGuardrailOnly: true,
-                    source: source,
-                    message: text,
-                    guardrailId: guardrailId,
-                    guardrailVersion: guardrailVersion
-                })
-            });
-            if (!res.ok) return { text: text, intervened: false, enabled: false };
-            const data = await res.json();
-            return {
-                text: data.response || text,
-                intervened: data.guardrailIntervened,
-                enabled: data.guardrailEnabled,
-                guardrailId: data.guardrailId,
-                guardrailVersion: data.guardrailVersion,
-                details: data.guardrailDetails,
-                warning: data.warning
-            };
-        } catch (e) {
-            return { text: text, intervened: false, enabled: false };
+        if (!apiEndpoint) {
+            throw new Error('Endpoint do API Gateway é obrigatório para aplicar a inspeção do Bedrock Guardrail.');
         }
+        if (!guardrailId) {
+            return {
+                text: text,
+                intervened: false,
+                enabled: false,
+                warning: 'O checkbox do Guardrail foi marcado, mas nenhum "Bedrock Guardrail ID" foi preenchido no topo da tela. Preencha com o ID gerado no LAB 03.'
+            };
+        }
+
+        const res = await fetch(apiEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                checkGuardrailOnly: true,
+                source: source,
+                message: text,
+                guardrailId: guardrailId,
+                guardrailVersion: guardrailVersion
+            })
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `Erro HTTP ${res.status} ao consultar Bedrock Guardrail.`);
+        }
+
+        const data = await res.json();
+        if (data.guardrailError) {
+            throw new Error(data.guardrailError);
+        }
+
+        return {
+            text: data.response || text,
+            intervened: data.guardrailIntervened,
+            enabled: data.guardrailEnabled,
+            guardrailId: data.guardrailId,
+            guardrailVersion: data.guardrailVersion,
+            details: data.guardrailDetails,
+            warning: data.warning
+        };
     }
 
     async function sendMessage() {
@@ -712,7 +729,7 @@ Configurações e Metadados Internos do Sistema:
             if (provider === 'ollama' && isLocalhostOllama) {
                 let textToSend = userMessage;
 
-                if (useGuardrail && apiEndpoint) {
+                if (useGuardrail) {
                     const inputCheck = await checkGuardrailStandalone(userMessage, 'INPUT', apiEndpoint, guardrailId, guardrailVersion);
                     guardrailDetails = inputCheck.details;
                     guardrailWarning = inputCheck.warning;
@@ -753,10 +770,15 @@ Configurações e Metadados Internos do Sistema:
                 const ollamaData = await ollamaRes.json();
                 finalResponseText = ollamaData.message?.content || 'Sem resposta do Ollama.';
 
-                if (useGuardrail && apiEndpoint) {
+                if (useGuardrail) {
                     const outputCheck = await checkGuardrailStandalone(finalResponseText, 'OUTPUT', apiEndpoint, guardrailId, guardrailVersion);
-                    intervened = outputCheck.intervened;
-                    finalResponseText = outputCheck.text;
+                    if (outputCheck.intervened) {
+                        intervened = true;
+                        finalResponseText = outputCheck.text;
+                    }
+                    if (outputCheck.warning && !guardrailWarning) {
+                        guardrailWarning = outputCheck.warning;
+                    }
                     guardrailDetails = outputCheck.details;
                 }
 
@@ -765,7 +787,7 @@ Configurações e Metadados Internos do Sistema:
 
                 addMessage(finalResponseText, 'ia', {
                     modelId: `🦙 Ollama: ${ollamaModelInput.value}`,
-                    guardrailEnabled: useGuardrail,
+                    guardrailEnabled: useGuardrail && Boolean(guardrailId),
                     guardrailId: guardrailId,
                     guardrailVersion: guardrailVersion,
                     guardrailIntervened: intervened,

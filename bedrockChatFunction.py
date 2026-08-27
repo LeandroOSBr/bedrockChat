@@ -67,8 +67,13 @@ def apply_bedrock_guardrail(text, guardrail_id, guardrail_version, source='INPUT
             'usage': response.get('usage', {})
         }
     except Exception as e:
-        print(f"AVISO: Falha ao aplicar Guardrail [{source}]: {e}")
-        return {'action': 'NONE', 'text': text, 'intervened': False, 'error': str(e)}
+        print(f"ERRO: Falha ao aplicar Guardrail [{source}]: {e}")
+        return {
+            'action': 'ERROR',
+            'text': text,
+            'intervened': False,
+            'error': f"Erro ao aplicar Bedrock Guardrail ({type(e).__name__}): {str(e)}"
+        }
 
 def lambda_handler(event, context):
     """
@@ -115,7 +120,8 @@ def lambda_handler(event, context):
                         'guardrailId': guardrail_id,
                         'guardrailVersion': guardrail_version,
                         'guardrailDetails': guard_result.get('assessments', []),
-                        'warning': guard_result.get('warning')
+                        'warning': guard_result.get('warning'),
+                        'guardrailError': guard_result.get('error')
                     })
                 }
 
