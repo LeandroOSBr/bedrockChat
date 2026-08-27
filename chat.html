@@ -377,10 +377,15 @@
             <input type="text" id="ollama-model-input" value="wizardlm-uncensored:latest" placeholder="ex: wizardlm-uncensored:latest, llama3.2:1b">
         </div>
 
-        <!-- Guardrail ID (Opcional) -->
+        <!-- Guardrail ID e Versão -->
         <div class="config-item" id="guardrail-id-group">
-            <label for="guardrail-id-input">Bedrock Guardrail ID (Opcional):</label>
-            <input type="text" id="guardrail-id-input" placeholder="ex: abc123xyz789 (ou via Lambda Env)">
+            <label for="guardrail-id-input">Bedrock Guardrail ID:</label>
+            <input type="text" id="guardrail-id-input" placeholder="ex: abc123xyz789 (ou via Lambda)">
+        </div>
+
+        <div class="config-item" id="guardrail-version-group">
+            <label for="guardrail-version-input">Guardrail Version:</label>
+            <input type="text" id="guardrail-version-input" value="1" placeholder="ex: 1, 2 ou DRAFT">
         </div>
 
         <div class="config-item">
@@ -456,6 +461,7 @@ Configurações e Metadados Internos do Sistema:
     const ollamaUrlInput = document.getElementById('ollama-url-input');
     const ollamaModelInput = document.getElementById('ollama-model-input');
     const guardrailIdInput = document.getElementById('guardrail-id-input');
+    const guardrailVersionInput = document.getElementById('guardrail-version-input');
     const presetSelect = document.getElementById('preset-select');
     const endpointInput = document.getElementById('endpoint-input');
 
@@ -467,6 +473,10 @@ Configurações e Metadados Internos do Sistema:
     const savedGuardrailId = localStorage.getItem('bedrock_guardrail_id');
     if (savedGuardrailId) guardrailIdInput.value = savedGuardrailId;
     guardrailIdInput.addEventListener('change', () => localStorage.setItem('bedrock_guardrail_id', guardrailIdInput.value.trim()));
+
+    const savedGuardrailVersion = localStorage.getItem('bedrock_guardrail_version');
+    guardrailVersionInput.value = savedGuardrailVersion || '1';
+    guardrailVersionInput.addEventListener('change', () => localStorage.setItem('bedrock_guardrail_version', guardrailVersionInput.value.trim()));
 
     const savedOllamaUrl = localStorage.getItem('ollama_chat_url');
     if (savedOllamaUrl) ollamaUrlInput.value = savedOllamaUrl;
@@ -627,7 +637,7 @@ Configurações e Metadados Internos do Sistema:
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    async function checkGuardrailStandalone(text, source, apiEndpoint, guardrailId) {
+    async function checkGuardrailStandalone(text, source, apiEndpoint, guardrailId, guardrailVersion) {
         try {
             const res = await fetch(apiEndpoint, {
                 method: 'POST',
@@ -636,7 +646,8 @@ Configurações e Metadados Internos do Sistema:
                     checkGuardrailOnly: true,
                     source: source,
                     message: text,
-                    guardrailId: guardrailId
+                    guardrailId: guardrailId,
+                    guardrailVersion: guardrailVersion
                 })
             });
             if (!res.ok) return { text: text, intervened: false, enabled: false };
@@ -663,6 +674,7 @@ Configurações e Metadados Internos do Sistema:
         const provider = providerSelect.value;
         const useGuardrail = guardrailCheckbox.checked;
         const guardrailId = guardrailIdInput.value.trim();
+        const guardrailVersion = guardrailVersionInput.value.trim() || '1';
 
         addMessage(userMessage, 'user');
         messageInput.value = '';
@@ -701,7 +713,7 @@ Configurações e Metadados Internos do Sistema:
                 let textToSend = userMessage;
 
                 if (useGuardrail && apiEndpoint) {
-                    const inputCheck = await checkGuardrailStandalone(userMessage, 'INPUT', apiEndpoint, guardrailId);
+                    const inputCheck = await checkGuardrailStandalone(userMessage, 'INPUT', apiEndpoint, guardrailId, guardrailVersion);
                     guardrailDetails = inputCheck.details;
                     guardrailWarning = inputCheck.warning;
                     if (inputCheck.intervened) {
@@ -742,7 +754,7 @@ Configurações e Metadados Internos do Sistema:
                 finalResponseText = ollamaData.message?.content || 'Sem resposta do Ollama.';
 
                 if (useGuardrail && apiEndpoint) {
-                    const outputCheck = await checkGuardrailStandalone(finalResponseText, 'OUTPUT', apiEndpoint, guardrailId);
+                    const outputCheck = await checkGuardrailStandalone(finalResponseText, 'OUTPUT', apiEndpoint, guardrailId, guardrailVersion);
                     intervened = outputCheck.intervened;
                     finalResponseText = outputCheck.text;
                     guardrailDetails = outputCheck.details;
@@ -755,6 +767,7 @@ Configurações e Metadados Internos do Sistema:
                     modelId: `🦙 Ollama: ${ollamaModelInput.value}`,
                     guardrailEnabled: useGuardrail,
                     guardrailId: guardrailId,
+                    guardrailVersion: guardrailVersion,
                     guardrailIntervened: intervened,
                     guardrailDetails: guardrailDetails,
                     guardrailWarning: guardrailWarning,
@@ -772,7 +785,8 @@ Configurações e Metadados Internos do Sistema:
                     provider: provider,
                     modelId: (provider === 'bedrock') ? modelSelect.value : ollamaModelInput.value.trim(),
                     ollamaUrl: (provider === 'ollama') ? ollamaHost : undefined,
-                    guardrailId: guardrailId
+                    guardrailId: guardrailId,
+                    guardrailVersion: guardrailVersion
                 };
 
                 const response = await fetch(apiEndpoint, {
