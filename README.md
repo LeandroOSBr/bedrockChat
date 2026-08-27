@@ -27,7 +27,7 @@ O objetivo deste projeto é guiar os estudantes através de uma jornada completa
         ├── 🛡️ AWS Bedrock Guardrails (Input & Output Inspection)
         │
         ▼
-[ Amazon Bedrock (Meta Llama 3 / Amazon Nova / Claude 3.5) ]
+[ Amazon Bedrock (Meta Llama 3 / Amazon Nova) ]
 ```
 
 ---

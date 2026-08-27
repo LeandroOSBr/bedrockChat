@@ -40,9 +40,7 @@
 4. Você pode explorar os modelos disponíveis:
    - **Meta:** `Llama 3 8B Instruct` (`meta.llama3-8b-instruct-v1:0`) ou `Llama 3.1 8B Instruct` (`us.meta.llama3-1-8b-instruct-v1:0`)
    - **Amazon:** `Amazon Nova Lite v1` (`us.amazon.nova-lite-v1:0`) ou `Amazon Nova Micro v1` (`us.amazon.nova-micro-v1:0`)
-   - **Anthropic:** `Claude 3.5 Haiku` (`us.anthropic.claude-3-5-haiku-20241022-v1:0`)
-5. *(Opcional)* Clique em **Playgrounds** > **Chat** no menu lateral para fazer um teste interativo rápido. 
-   *(Nota: O antigo Claude 3 Haiku foi marcado como Legacy pela Anthropic/AWS; caso vá utilizar a Anthropic, utilize a nova versão 3.5 Haiku).*
+5. *(Opcional)* Clique em **Playgrounds** > **Chat** no menu lateral para fazer um teste interativo rápido.
 
 ---
 
