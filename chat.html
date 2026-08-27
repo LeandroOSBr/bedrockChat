@@ -667,7 +667,13 @@ Configurações e Metadados Internos do Sistema:
         } catch (error) {
             const indicator = document.getElementById('thinking-indicator');
             if (indicator) indicator.remove();
-            addMessage(`❌ Falha na requisição: ${error.message}`, 'ia', {
+            
+            let errorMsg = error.message;
+            if (provider === 'ollama' && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('Erro ao conectar'))) {
+                errorMsg = `Não foi possível conectar ao Ollama local a partir do site no S3.\n\n🔒 MOTIVO DE SEGURANÇA DO NAVEGADOR: O Chrome bloqueia sites públicos na internet (S3) de acessarem o 'localhost/127.0.0.1' (Private Network Access).\n\n💡 COMO RESOLVER: Abra o arquivo localmente no navegador colando na barra de endereços: file:///c:/apps/bedrockChat/chat.html (ou utilize o AWS Bedrock).`;
+            }
+
+            addMessage(`❌ Falha na requisição:\n${errorMsg}`, 'ia', {
                 modelId: 'Erro na Comunicação',
                 guardrailEnabled: useGuardrail,
                 guardrailIntervened: false
