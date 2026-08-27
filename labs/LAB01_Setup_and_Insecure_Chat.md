@@ -28,16 +28,21 @@
 
 ## 📋 Passo a Passo de Configuração
 
-### 1. Habilitar Acesso aos Modelos no Amazon Bedrock
+### 1. Acesso aos Modelos no Amazon Bedrock (Acesso Automático / Simplificado)
+
+> [!NOTE]
+> **Atualização da AWS**: A página tradicional *"Model access"* foi descontinuada pela AWS. Os modelos de Fundação Serverless (como **Meta Llama 3**, **Llama 3.1** e **Amazon Titan**) agora são **habilitados automaticamente sob demanda** assim que sua função Lambda ou o console faz a primeira chamada (inferência), desde que sua conta/role IAM possua permissões do Bedrock.
+
+#### Como validar a disponibilidade dos modelos:
 1. Acesse o **Console AWS** na região **us-east-1 (N. Virginia)**.
 2. No menu de busca, digite **Bedrock** e clique em **Amazon Bedrock**.
-3. No menu lateral esquerdo, desça até **Model access** (Acesso ao modelo).
-4. Clique no botão **Enable specific models** ou **Modify model access**.
-5. Selecione os seguintes modelos:
-   - **Meta:** `Llama 3 8B Instruct` e `Llama 3.1 8B Instruct`
+3. No menu lateral esquerdo, clique em **Model catalog** (Catálogo de modelos).
+4. Você pode explorar os modelos disponíveis:
+   - **Meta:** `Llama 3 8B Instruct` ou `Llama 3.1 8B Instruct` (Modelos recomendados para a aula)
    - **Amazon:** `Titan Text G1 - Express`
    - **Anthropic:** `Claude 3 Haiku`
-6. Avance e confirme a solicitação. A liberação para a maioria dos modelos é quase instantânea.
+5. *(Opcional)* Clique em **Playgrounds** > **Chat** no menu lateral para fazer um teste interativo rápido. 
+   *(Nota: Para modelos Anthropic Claude, se for o primeiro uso na conta, a AWS pode exibir um breve formulário solicitando informações do caso de uso da empresa/estudo).*
 
 ---
 
