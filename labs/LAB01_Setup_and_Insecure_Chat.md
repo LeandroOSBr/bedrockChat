@@ -31,15 +31,15 @@
 ### 1. Acesso aos Modelos no Amazon Bedrock (Acesso Automático / Simplificado)
 
 > [!NOTE]
-> **Atualização da AWS**: A página tradicional *"Model access"* foi descontinuada pela AWS. Os modelos de Fundação Serverless (como **Meta Llama 3**, **Llama 3.1** e **Amazon Titan**) agora são **habilitados automaticamente sob demanda** assim que sua função Lambda ou o console faz a primeira chamada (inferência), desde que sua conta/role IAM possua permissões do Bedrock.
+> **Atualização da AWS**: A página tradicional *"Model access"* foi descontinuada pela AWS. Os modelos de Fundação Serverless (como **Meta Llama 3**, **Llama 3.1** e **Amazon Nova**) agora são **habilitados automaticamente sob demanda** assim que sua função Lambda ou o console faz a primeira chamada (inferência), desde que sua conta/role IAM possua permissões do Bedrock.
 
 #### Como validar a disponibilidade dos modelos:
 1. Acesse o **Console AWS** na região **us-east-1 (N. Virginia)**.
 2. No menu de busca, digite **Bedrock** e clique em **Amazon Bedrock**.
 3. No menu lateral esquerdo, clique em **Model catalog** (Catálogo de modelos).
 4. Você pode explorar os modelos disponíveis:
-   - **Meta:** `Llama 3 8B Instruct` (`meta.llama3-8b-instruct-v1:0`) ou `Llama 3.1 8B Instruct` (Modelos recomendados para demonstrar ataques)
-   - **Amazon:** `Amazon Nova Lite v1` (`amazon.nova-lite-v1:0`) ou `Titan Text G1 - Express`
+   - **Meta:** `Llama 3 8B Instruct` (`meta.llama3-8b-instruct-v1:0`) ou `Llama 3.1 8B Instruct` (`us.meta.llama3-1-8b-instruct-v1:0`)
+   - **Amazon:** `Amazon Nova Lite v1` (`us.amazon.nova-lite-v1:0`) ou `Amazon Nova Micro v1` (`us.amazon.nova-micro-v1:0`)
    - **Anthropic:** `Claude 3.5 Haiku` (`us.anthropic.claude-3-5-haiku-20241022-v1:0`)
 5. *(Opcional)* Clique em **Playgrounds** > **Chat** no menu lateral para fazer um teste interativo rápido. 
    *(Nota: O antigo Claude 3 Haiku foi marcado como Legacy pela Anthropic/AWS; caso vá utilizar a Anthropic, utilize a nova versão 3.5 Haiku).*

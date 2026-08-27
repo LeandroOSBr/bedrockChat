@@ -68,7 +68,7 @@ bedrockChat/
 
 1. **Backend:** Suba o código de [`bedrockChatFunction.py`](bedrockChatFunction.py) na sua função AWS Lambda (Python 3.12).
 2. **Frontend:** Configure o endpoint do API Gateway no arquivo [`chat.html`](chat.html) e faça o upload para o seu bucket S3 com hospedagem de site estático habilitada.
-3. **Modelos Recomendados:** Habilite o modelo `meta.llama3-8b-instruct-v1:0` ou `amazon.titan-text-express-v1` no console do Bedrock para permitir a demonstração didática dos ataques antes da ativação dos Guardrails.
+3. **Modelos Recomendados:** Utilize o modelo `meta.llama3-8b-instruct-v1:0` ou `us.amazon.nova-lite-v1:0` no console do Bedrock para demonstrar os ataques e vulnerabilidades antes da ativação dos Guardrails.
 4. **Laboratórios:** Siga o passo a passo nos arquivos da pasta `labs/`.
 
 ---
