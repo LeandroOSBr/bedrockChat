@@ -95,8 +95,23 @@ def lambda_handler(event, context):
             else:
                 print(f"INFO: Guardrail DESABILITADO. Modelo [{model_id}] executando sem filtros externos.")
 
-            # Chamada unificada da Converse API
-            response = bedrock_runtime.converse(**converse_args)
+            # Chamada unificada da Converse API com fallback automático se o modelo não aceitar parâmetro 'system'
+            try:
+                response = bedrock_runtime.converse(**converse_args)
+            except ClientError as e:
+                error_msg = e.response.get('Error', {}).get('Message', '')
+                error_code = e.response.get('Error', {}).get('Code', '')
+                if 'system' in error_msg.lower() or 'not support system' in error_msg.lower():
+                    print(f"AVISO: Modelo [{model_id}] não suporta parâmetro 'system'. Executando com instrução no corpo da mensagem.")
+                    fallback_messages = [{
+                        "role": "user",
+                        "content": [{"text": f"INSTRUÇÕES DO SISTEMA:\n{SYSTEM_PROMPT}\n\nMENSAGEM DO USUÁRIO:\n{user_message}"}]
+                    }]
+                    converse_args.pop('system', None)
+                    converse_args['messages'] = fallback_messages
+                    response = bedrock_runtime.converse(**converse_args)
+                else:
+                    raise e
 
             stop_reason = response.get('stopReason', 'end_turn')
             output_content = response.get('output', {}).get('message', {}).get('content', [{}])

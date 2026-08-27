@@ -310,14 +310,20 @@
 
         <!-- Config & Model Selector -->
         <div id="config-bar">
+            <div class="config-item" style="grid-column: 1 / -1;">
+                <label for="endpoint-input">Endpoint da API (API Gateway):</label>
+                <input type="text" id="endpoint-input" placeholder="https://xxxxxxxx.execute-api.us-east-1.amazonaws.com/default/bedrockChatFunction" style="font-family: monospace;">
+            </div>
+
             <div class="config-item">
                 <label for="model-select">Modelo LLM (Bedrock):</label>
                 <select id="model-select">
                     <option value="meta.llama3-8b-instruct-v1:0" selected>Meta Llama 3 8B Instruct</option>
-                    <option value="us.meta.llama3-2-1b-instruct-v1:0">Meta Llama 3.2 1B Instruct (Ultra Leve - Ótimo para Explorações)</option>
+                    <option value="us.meta.llama3-2-1b-instruct-v1:0">Meta Llama 3.2 1B Instruct (Recomendado / Ultra Leve)</option>
                     <option value="us.meta.llama3-2-3b-instruct-v1:0">Meta Llama 3.2 3B Instruct</option>
-                    <option value="us.meta.llama3-1-8b-instruct-v1:0">Meta Llama 3.1 8B Instruct (Cross-Region Profile)</option>
+                    <option value="us.meta.llama3-1-8b-instruct-v1:0">Meta Llama 3.1 8B Instruct (Cross-Region)</option>
                     <option value="amazon.titan-text-express-v1">Amazon Titan Text Express v1</option>
+                    <option value="us.amazon.nova-lite-v1:0">Amazon Nova Lite v1</option>
                     <option value="us.anthropic.claude-3-5-haiku-20241022-v1:0">Anthropic Claude 3.5 Haiku</option>
                 </select>
             </div>
@@ -325,7 +331,7 @@
             <div class="config-item">
                 <label>Proteção Guardrail:</label>
                 <label class="toggle-label" style="margin-top: 5px;">
-                    <input type="checkbox" id="guardrail-checkbox" checked>
+                    <input type="checkbox" id="guardrail-checkbox">
                     <span>Ativar Bedrock Guardrail</span>
                 </label>
             </div>
@@ -376,9 +382,6 @@
     </div>
 
     <script>
-        // URL DO API GATEWAY (Configure com o endpoint da sua função Lambda)
-        const API_ENDPOINT = 'https://0219idbg96.execute-api.us-east-1.amazonaws.com/default/bedrockChatFunction';
-
         const messagesContainer = document.getElementById('messages');
         const messageInput = document.getElementById('message-input');
         const sendButton = document.getElementById('send-button');
@@ -386,6 +389,19 @@
         const insecureRenderCheckbox = document.getElementById('insecure-render-checkbox');
         const modelSelect = document.getElementById('model-select');
         const presetSelect = document.getElementById('preset-select');
+        const endpointInput = document.getElementById('endpoint-input');
+
+        // Carregar e persistir o endpoint do API Gateway no LocalStorage
+        const savedEndpoint = localStorage.getItem('bedrock_chat_api_endpoint');
+        if (savedEndpoint) {
+            endpointInput.value = savedEndpoint;
+        } else {
+            endpointInput.value = 'https://s2xumiyt68.execute-api.us-east-1.amazonaws.com/default/bedrockChatFunction';
+        }
+
+        endpointInput.addEventListener('change', () => {
+            localStorage.setItem('bedrock_chat_api_endpoint', endpointInput.value.trim());
+        });
 
         // Dicionário com payloads de teste realistas e altamente eficazes do OWASP Top 10 for LLM
         const ATTACK_PRESETS = {
@@ -451,6 +467,14 @@
             const userMessage = messageInput.value.trim();
             if (userMessage === '') return;
 
+            const apiEndpoint = endpointInput.value.trim();
+            if (!apiEndpoint) {
+                alert('Por favor, informe a URL do seu API Gateway no topo da tela.');
+                endpointInput.focus();
+                return;
+            }
+            localStorage.setItem('bedrock_chat_api_endpoint', apiEndpoint);
+
             addMessage(userMessage, 'user');
             messageInput.value = '';
             presetSelect.value = '';
@@ -473,7 +497,7 @@
             const selectedModel = modelSelect.value;
 
             try {
-                const response = await fetch(API_ENDPOINT, {
+                const response = await fetch(apiEndpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -490,7 +514,7 @@
 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
+                    throw new Error(errorData.error || `Erro HTTP ${response.status}: Verifique se a URL da API e o CORS estão corretos.`);
                 }
 
                 const data = await response.json();
@@ -505,7 +529,7 @@
                 const indicator = document.getElementById('thinking-indicator');
                 if (indicator) indicator.remove();
                 addMessage(`❌ Falha na requisição: ${error.message}`, 'ia', {
-                    modelId: 'Erro no Sistema',
+                    modelId: 'Erro na Comunicação',
                     guardrailEnabled: useGuardrail,
                     guardrailIntervened: false
                 });
