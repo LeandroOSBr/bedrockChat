@@ -38,11 +38,11 @@
 2. No menu de busca, digite **Bedrock** e clique em **Amazon Bedrock**.
 3. No menu lateral esquerdo, clique em **Model catalog** (Catálogo de modelos).
 4. Você pode explorar os modelos disponíveis:
-   - **Meta:** `Llama 3 8B Instruct` ou `Llama 3.1 8B Instruct` (Modelos recomendados para a aula)
-   - **Amazon:** `Titan Text G1 - Express`
-   - **Anthropic:** `Claude 3 Haiku`
+   - **Meta:** `Llama 3 8B Instruct` (`meta.llama3-8b-instruct-v1:0`) ou `Llama 3.1 8B Instruct` (Modelos recomendados para demonstrar ataques)
+   - **Amazon:** `Amazon Nova Lite v1` (`amazon.nova-lite-v1:0`) ou `Titan Text G1 - Express`
+   - **Anthropic:** `Claude 3.5 Haiku` (`us.anthropic.claude-3-5-haiku-20241022-v1:0`)
 5. *(Opcional)* Clique em **Playgrounds** > **Chat** no menu lateral para fazer um teste interativo rápido. 
-   *(Nota: Para modelos Anthropic Claude, se for o primeiro uso na conta, a AWS pode exibir um breve formulário solicitando informações do caso de uso da empresa/estudo).*
+   *(Nota: O antigo Claude 3 Haiku foi marcado como Legacy pela Anthropic/AWS; caso vá utilizar a Anthropic, utilize a nova versão 3.5 Haiku).*
 
 ---
 
