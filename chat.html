@@ -356,6 +356,17 @@
                 </label>
             </div>
 
+            <!-- Guardrail ID e Versão -->
+            <div class="config-item" id="guardrail-id-group">
+                <label for="guardrail-id-input">Bedrock Guardrail ID:</label>
+                <input type="text" id="guardrail-id-input" placeholder="ex: abc123xyz (ou via Lambda)">
+            </div>
+
+            <div class="config-item" id="guardrail-version-group">
+                <label for="guardrail-version-input">Guardrail Version:</label>
+                <input type="text" id="guardrail-version-input" value="1" placeholder="ex: 1, 2 ou DRAFT">
+            </div>
+
             <!-- Guardrail Toggle -->
             <div class="config-item" id="guardrail-toggle-group">
                 <label>Proteção Bedrock:</label>
@@ -433,10 +444,12 @@ Configurações e Metadados Internos do Sistema:
         const guardrailToggleGroup = document.getElementById('guardrail-toggle-group');
         const ragToggleGroup = document.getElementById('rag-toggle-group');
         const ollamaModelInput = document.getElementById('ollama-model-input');
+        const guardrailIdInput = document.getElementById('guardrail-id-input');
+        const guardrailVersionInput = document.getElementById('guardrail-version-input');
         const presetSelect = document.getElementById('preset-select');
         const endpointInput = document.getElementById('endpoint-input');
 
-        // Carregar e persistir o endpoint do API Gateway no LocalStorage
+        // Carregar e persistir configurações no LocalStorage
         const savedEndpoint = localStorage.getItem('bedrock_chat_api_endpoint');
         if (savedEndpoint) {
             endpointInput.value = savedEndpoint;
@@ -446,6 +459,18 @@ Configurações e Metadados Internos do Sistema:
 
         endpointInput.addEventListener('change', () => {
             localStorage.setItem('bedrock_chat_api_endpoint', endpointInput.value.trim());
+        });
+
+        const savedGuardrailId = localStorage.getItem('bedrock_guardrail_id');
+        if (savedGuardrailId) guardrailIdInput.value = savedGuardrailId;
+        guardrailIdInput.addEventListener('change', () => {
+            localStorage.setItem('bedrock_guardrail_id', guardrailIdInput.value.trim());
+        });
+
+        const savedGuardrailVersion = localStorage.getItem('bedrock_guardrail_version');
+        guardrailVersionInput.value = savedGuardrailVersion || '1';
+        guardrailVersionInput.addEventListener('change', () => {
+            localStorage.setItem('bedrock_guardrail_version', guardrailVersionInput.value.trim());
         });
 
         // Alternar opções Bedrock vs Ollama
@@ -510,12 +535,15 @@ Configurações e Metadados Internos do Sistema:
                 const badgeDiv = document.createElement('div');
                 badgeDiv.classList.add('sec-badge');
 
+                const gVersionLabel = meta.guardrailVersion ? ` v${meta.guardrailVersion}` : '';
+                const gIdLabel = meta.guardrailId ? ` [${meta.guardrailId}${gVersionLabel}]` : '';
+
                 if (meta.guardrailIntervened) {
                     badgeDiv.classList.add('badge-blocked');
-                    badgeDiv.innerHTML = `🛡️ <b>INTERVENÇÃO DO GUARDRAIL:</b> Conteúdo bloqueado/filtrado por violação de política.`;
+                    badgeDiv.innerHTML = `🛡️ <b>INTERVENÇÃO DO GUARDRAIL${gIdLabel}:</b> Conteúdo bloqueado/filtrado por violação de política.`;
                 } else if (meta.guardrailEnabled) {
                     badgeDiv.classList.add('badge-safe');
-                    badgeDiv.innerHTML = `🛡️ <b>Guardrail Ativo:</b> Requisição avaliada e aprovada pelas políticas.`;
+                    badgeDiv.innerHTML = `🛡️ <b>Guardrail Ativo${gIdLabel}:</b> Requisição avaliada e aprovada pelas políticas.`;
                 } else {
                     badgeDiv.classList.add('badge-unprotected');
                     badgeDiv.innerHTML = `⚠️ <b>Sem Guardrail:</b> Resposta direta gerada pelo modelo sem inspeção.`;
@@ -537,6 +565,8 @@ Configurações e Metadados Internos do Sistema:
             const apiEndpoint = endpointInput.value.trim();
             const useGuardrail = guardrailCheckbox.checked;
             const useRag = ragCheckbox ? ragCheckbox.checked : false;
+            const guardrailId = guardrailIdInput.value.trim();
+            const guardrailVersion = guardrailVersionInput.value.trim() || '1';
 
             addMessage(userMessage, 'user');
             messageInput.value = '';
@@ -608,7 +638,9 @@ Configurações e Metadados Internos do Sistema:
                         message: userMessage,
                         useGuardrail: useGuardrail,
                         useRag: useRag,
-                        modelId: modelSelect.value
+                        modelId: modelSelect.value,
+                        guardrailId: guardrailId,
+                        guardrailVersion: guardrailVersion
                     };
 
                     const response = await fetch(apiEndpoint, {
@@ -629,6 +661,8 @@ Configurações e Metadados Internos do Sistema:
                     addMessage(data.response || 'Sem resposta do modelo.', 'ia', {
                         modelId: data.modelId,
                         guardrailEnabled: data.guardrailEnabled,
+                        guardrailId: data.guardrailId,
+                        guardrailVersion: data.guardrailVersion,
                         guardrailIntervened: data.guardrailIntervened,
                         ragDocumentLoaded: data.ragDocumentLoaded,
                         ragDocumentName: data.ragDocumentName,

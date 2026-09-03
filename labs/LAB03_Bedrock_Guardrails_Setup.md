@@ -102,20 +102,29 @@ Configure a detecção automática de dados sensíveis para evitar **LLM06**:
 
 ---
 
-## ⚙️ Conectando o Guardrail à Função Lambda
+## ⚙️ Conectando o Guardrail à Aplicação
 
-1. Acesse o console do **AWS Lambda** e abra a função `bedrockChatFunction`.
-2. Vá na aba **Configuração** > **Variáveis de ambiente** > **Editar**:
+Você pode informar o Guardrail ID e a Versão de duas formas:
+
+### Opção A (Direto na Interface Web - Mais Fácil para os Alunos):
+1. No cabeçalho do [`chat.html`](../chat.html), preencha:
+   - **Bedrock Guardrail ID:** Cole o ID gerado (ex: `abc123xyz789`).
+   - **Guardrail Version:** Informe o número da versão criada (ex: `1`, `2` ou `DRAFT`).
+   - Marque a caixa **"Bedrock Guardrail"**.
+2. Os valores são salvos automaticamente no navegador para os próximos testes!
+
+### Opção B (Padrão Global via AWS Lambda):
+1. Acesse o console do **AWS Lambda** > função `bedrockChatFunction`.
+2. Vá na aba **Configuration** > **Environment variables** > **Edit**:
    - `GUARDRAIL_ID`: Cole o ID do seu Guardrail.
-   - `GUARDRAIL_VERSION`: Informe `1` (ou a versão criada).
-   - `MODEL_ID`: `meta.llama3-8b-instruct-v1:0`
-3. Clique em **Salvar**.
+   - `GUARDRAIL_VERSION`: Informe `1` (ou a versão desejada).
+3. Clique em **Save**.
 
 ---
 
 ## 🔬 Testando a Proteção (Comparativo Before vs After)
 
-Abra a interface `chat.html` no navegador e certifique-se de que o checkbox **"Ativar Bedrock Guardrail"** esteja **MARCADO**.
+Abra a interface [`chat.html`](../chat.html) no navegador e certifique-se de que o checkbox **"Bedrock Guardrail"** esteja **MARCADO**.
 
 ### Teste 1: Reexecutar o Ataque de Prompt Injection (LLM01)
 * **Prompt:** Envie o payload de `[SYSTEM OVERRIDE]` do LAB 02.

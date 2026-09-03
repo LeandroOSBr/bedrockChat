@@ -119,16 +119,23 @@ Dúvida do Colaborador:
                 }
             }
 
+            # Parâmetros de Guardrail dinâmicos (permite configuração via Frontend ou Lambda Env)
+            guardrail_id = (body.get('guardrailId') or GUARDRAIL_ID or '').strip()
+            guardrail_version = (body.get('guardrailVersion') or GUARDRAIL_VERSION or 'DRAFT').strip()
+
             # Configuração condicional do Guardrail
-            if use_guardrail and GUARDRAIL_ID:
-                print(f"INFO: Guardrail HABILITADO [{GUARDRAIL_ID} v{GUARDRAIL_VERSION}] para o modelo [{model_id}].")
+            if use_guardrail and guardrail_id:
+                print(f"INFO: Guardrail HABILITADO [{guardrail_id} v{guardrail_version}] para o modelo [{model_id}].")
                 converse_args['guardrailConfig'] = {
-                    'guardrailIdentifier': GUARDRAIL_ID,
-                    'guardrailVersion': GUARDRAIL_VERSION,
+                    'guardrailIdentifier': guardrail_id,
+                    'guardrailVersion': guardrail_version,
                     'trace': 'enabled'
                 }
             else:
-                print(f"INFO: Guardrail DESABILITADO. Modelo [{model_id}] executando sem filtros externos.")
+                if use_guardrail and not guardrail_id:
+                    print("AVISO: useGuardrail=True mas nenhum GUARDRAIL_ID foi informado.")
+                else:
+                    print(f"INFO: Guardrail DESABILITADO. Modelo [{model_id}] executando sem filtros externos.")
 
             # Chamada unificada da Converse API com fallback automático se o modelo não aceitar parâmetro 'system'
             try:
@@ -160,7 +167,9 @@ Dúvida do Colaborador:
                 'response': model_response_text,
                 'modelId': model_id,
                 'stopReason': stop_reason,
-                'guardrailEnabled': bool(use_guardrail and GUARDRAIL_ID),
+                'guardrailEnabled': bool(use_guardrail and guardrail_id),
+                'guardrailId': guardrail_id if (use_guardrail and guardrail_id) else None,
+                'guardrailVersion': guardrail_version if (use_guardrail and guardrail_id) else None,
                 'guardrailIntervened': guardrail_intervened,
                 'ragDocumentLoaded': rag_doc_loaded,
                 'ragDocumentName': rag_doc_name,
