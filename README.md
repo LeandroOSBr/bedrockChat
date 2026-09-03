@@ -42,6 +42,7 @@ A disciplina é estruturada em 4 laboratórios modulares:
 | **LAB 02** | [`labs/LAB02_OWASP_Top10_Exploitation.md`](labs/LAB02_OWASP_Top10_Exploitation.md) | Execução de ataques práticos: Prompt Injection, Jailbreaking, Vazamento de PII (LLM06), System Prompt Extraction (LLM07) e XSS (LLM02). |
 | **LAB 03** | [`labs/LAB03_Bedrock_Guardrails_Setup.md`](labs/LAB03_Bedrock_Guardrails_Setup.md) | Criação de Guardrails no console AWS, configuração de políticas de conteúdo/Jailbreak/PII e testes comparativos (*Before vs After*). |
 | **LAB 04** | [`labs/LAB04_RAG_and_Data_Poisoning.md`](labs/LAB04_RAG_and_Data_Poisoning.md) | Simulação de RAG, envenenamento de documentos (*Indirect Prompt Injection*) e mitigação com **Contextual Grounding**. |
+| **LAB 05** | [`labs/LAB05_Observability_XRay_ApplicationSignals.md`](labs/LAB05_Observability_XRay_ApplicationSignals.md) | Observabilidade e monitoramento de GenAI com **AWS X-Ray** e **CloudWatch Application Signals**. |
 
 ---
 
@@ -56,7 +57,8 @@ bedrockChat/
 │   ├── LAB01_Setup_and_Insecure_Chat.md     <- Guia passo a passo de deploy AWS
 │   ├── LAB02_OWASP_Top10_Exploitation.md   <- Roteiro com 6 ataques do OWASP Top 10
 │   ├── LAB03_Bedrock_Guardrails_Setup.md   <- Guia de criação de Bedrock Guardrails
-│   └── LAB04_RAG_and_Data_Poisoning.md     <- Laboratório de RAG, Injeção Indireta e Grounding
+│   ├── LAB04_RAG_and_Data_Poisoning.md     <- Laboratório de RAG, Injeção Indireta e Grounding
+│   └── LAB05_Observability_XRay_ApplicationSignals.md <- Guia de Observabilidade GenAI com X-Ray e Application Signals
 └── datasets_poisoning/
     ├── politica_reembolso_legitima.txt      <- Documento corporativo limpo para testes RAG
     └── politica_reembolso_envenenada.txt    <- Documento com payload de injeção indireta oculta
