@@ -1,19 +1,22 @@
-# LAB 05: Observabilidade e Monitoramento de IA Generativa com AWS X-Ray & CloudWatch Application Signals
+# LAB 05: Observabilidade e Monitoramento de IA Generativa com AWS X-Ray, CloudWatch Application Signals & Model Invocation Logging
 
 ---
 
 ## 🎯 Objetivos de Aprendizagem
 
 Ao final deste laboratório, você será capaz de:
-1. Compreender os fundamentos de **GenAI Observability** (Observabilidade para IA Generativa).
-2. Habilitar e configurar o **AWS X-Ray** e o **Amazon CloudWatch Application Signals** via AWS CLI e Console.
-3. Rastrear o ciclo de vida completo de inferências de LLM: tempo de resposta, consumo de tokens de entrada/saída e latência.
-4. Identificar intervenções de segurança do **Bedrock Guardrail** diretamente no mapa de rastreamento (*Trace Map*).
+1. Compreender a tríade da **GenAI Observability** na AWS:
+   * **AWS X-Ray:** Rastreamento distribuído e análise de latência de infraestrutura.
+   * **CloudWatch Application Signals:** Métricas de desempenho de IA (Tokens, Model IDs, Error Rates).
+   * **Bedrock Model Invocation Logging:** Auditoria completa do conteúdo dos prompts de entrada e respostas geradas.
+2. Habilitar e configurar o ecossistema completo via AWS CLI e Console.
+3. Rastrear o ciclo de vida completo de inferências de LLM: tempo de resposta, consumo de tokens e latência.
+4. Auditar tentativas de ataque (Prompt Injection, Jailbreaks) e vazamento de dados diretamente no CloudWatch Logs Insights.
 5. Analisar o **Service Map** do CloudWatch para isolar gargalos de desempenho e dependências lentas.
 
 ---
 
-## 🏗️ Arquitetura de Observabilidade
+## 🏗️ Arquitetura Completa de Observabilidade
 
 ```mermaid
 flowchart LR
@@ -27,9 +30,10 @@ flowchart LR
         D["🛡️ Bedrock Guardrail"]
         E["🧠 Amazon Bedrock (Llama 3 / Nova)"]
         
-        subgraph Telemetria ["📡 Camada de Observabilidade"]
+        subgraph Telemetria ["📡 Camada de Observabilidade & Auditoria"]
             F["🔍 AWS X-Ray (Traces & Service Map)"]
-            G["📊 CloudWatch Application Signals (GenAI Metrics)"]
+            G["📊 CloudWatch Application Signals (Métricas de Tokens & Latência)"]
+            H["📝 CloudWatch Logs: /aws/bedrock/modelinvocations (Auditoria de Prompts e Respostas)"]
         end
     end
 
@@ -40,22 +44,22 @@ flowchart LR
     
     B -.->|HTTP Traces| F
     C -.->|Segment Traces| F
-    C -.->|GenAI Metrics: Tokens & Latency| G
+    C -.->|GenAI Metrics| G
+    E -.->|Invocations: Prompts + Outputs| H
 ```
 
 ---
 
 ## 💻 Parte 1: Configuração via AWS CLI
 
-Executamos a configuração de permissões e ativação do rastreamento ativo com os comandos abaixo:
+A configuração completa dos 3 pilares de observabilidade pode ser realizada pelos comandos abaixo:
 
 ### 1.1 Anexar Políticas IAM à Role da Função Lambda
 
 ```powershell
-# Identificar a Role da Lambda
 $ROLE_NAME = "bedrockChatFunction-role-wvirpv3q"
 
-# Anexar permissão de escrita no daemon do X-Ray
+# Anexar permissão para envio de traces ao X-Ray
 aws iam attach-role-policy `
     --role-name $ROLE_NAME `
     --policy-arn arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
@@ -74,13 +78,25 @@ aws lambda update-function-configuration `
     --tracing-config Mode=Active
 ```
 
-### 1.3 Ajustar Limites de Taxa e Throttling no API Gateway
+### 1.3 Configurar o Bedrock Model Invocation Logging (Auditoria de Prompts e Respostas)
 
 ```powershell
-aws apigatewayv2 update-stage `
-    --api-id s2xumiyt68 `
-    --stage-name "default" `
-    --default-route-settings "ThrottlingBurstLimit=100,ThrottlingRateLimit=100.0"
+# 1. Criar o Log Group de auditoria do Bedrock
+aws logs create-log-group --log-group-name "/aws/bedrock/modelinvocations" --region us-east-1
+
+# 2. Criar a Role de Logging para o Bedrock assumir
+$trustPolicy = '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"bedrock.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+$trustPolicy | Out-File -FilePath "trust_policy.json" -Encoding ascii
+aws iam create-role --role-name BedrockModelInvocationLoggingRole --assume-role-policy-document file://trust_policy.json
+
+# 3. Anexar permissões de escrita de log para a Role
+$permPolicy = '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["logs:CreateLogStream","logs:PutLogEvents"],"Resource":"arn:aws:logs:us-east-1:*:log-group:/aws/bedrock/modelinvocations:*"}]}'
+$permPolicy | Out-File -FilePath "perm_policy.json" -Encoding ascii
+aws iam put-role-policy --role-name BedrockModelInvocationLoggingRole --policy-name BedrockLoggingPolicy --policy-document file://perm_policy.json
+
+# 4. Habilitar o Model Invocation Logging no Amazon Bedrock
+$logConfig = '{"cloudWatchConfig":{"logGroupName":"/aws/bedrock/modelinvocations","roleArn":"arn:aws:iam::947675433597:role/BedrockModelInvocationLoggingRole"},"textDataDeliveryEnabled":true,"imageDataDeliveryEnabled":true,"embeddingDataDeliveryEnabled":true}'
+aws bedrock put-model-invocation-logging-configuration --region us-east-1 --logging-config $logConfig
 ```
 
 ---
@@ -91,12 +107,9 @@ aws apigatewayv2 update-stage `
 2. Navegue até **AWS Lambda > Functions > `bedrockChatFunction`**.
 3. Clique na aba **Configuration** (Configuração) e selecione **Monitoring and operations tools** (Ferramentas de monitoramento e operações).
 4. Clique em **Edit** (Editar):
-   * Em **AWS X-Ray**, confirme que **Active tracing** está selecionado (**PassThrough** ➔ **Active**).
+   * Em **AWS X-Ray**, confirme que **Active tracing** está selecionado (**Active**).
    * Em **Amazon CloudWatch Application Signals**, marque a caixa **Enable Application Signals**.
 5. Clique em **Save** (Salvar).
-
-> [!NOTE]
-> Ao ativar o Application Signals pelo console, o Lambda anexa automaticamente a camada (Layer) do **AWS Distro for OpenTelemetry (ADOT)**, configurando a instrumentação automática do SDK Boto3 para chamadas ao Amazon Bedrock.
 
 ---
 
@@ -155,8 +168,26 @@ aws apigatewayv2 update-stage `
 
 ---
 
+### Exercício 5: Auditoria de Prompts e Respostas com CloudWatch Logs Insights
+
+Com o **Model Invocation Logging** ativo, você pode consultar o texto completo de todas as conversas e prompts enviados para a IA:
+
+1. No console da AWS, acesse **CloudWatch > Logs > Logs Insights**.
+2. Selecione o Log Group: **`/aws/bedrock/modelinvocations`**.
+3. Execute a seguinte consulta SQL/CloudWatch para extrair o Modelo, Prompt do Usuário, Tokens e Resposta:
+
+```sql
+fields @timestamp, modelId, input.inputBodyJson.messages.0.content.0.text as Prompt, output.outputBodyJson.output.message.content.0.text as Resposta, usage.totalTokens as TotalTokens, metrics.latencyMs as LatenciaMs
+| sort @timestamp desc
+| limit 20
+```
+
+4. Observe a tabela com a auditoria completa de cada mensagem trocada pelos alunos!
+
+---
+
 ## 🔒 Perguntas para Discussão em Aula
 
-1. **Impacto de Segurança:** Como o X-Ray e o CloudWatch ajudam a detectar ataques de *Denial of Wallet* (esgotamento de cota de tokens por requisições abusivas)?
-2. **Latência de Segurança:** Qual foi o acréscimo de latência (overhead em ms) causado pela inspeção do Bedrock Guardrail em comparação com a chamada sem proteção?
-3. **Governança:** Como os metadados de OpenTelemetry (`gen_ai.request.model`, `gen_ai.usage.total_tokens`) auxiliam times de FinOps e Segurança no monitoramento contínuo de IA?
+1. **Privacidade e LGPD:** Quando é seguro habilitar o *Model Invocation Logging* em produção? Como o *Bedrock Guardrails (mascaramento de PII)* protege os dados antes da gravação do log?
+2. **Impacto de Segurança:** Como o X-Ray e o CloudWatch ajudam a detectar ataques de *Denial of Wallet* (esgotamento de cota de tokens por requisições abusivas)?
+3. **Comparação de Ferramental:** Em quais cenários corporativos deve-se usar a pilha nativa da AWS (**X-Ray + Application Signals + Invocations**) versus ferramentas de terceiros como **Langfuse** ou **LangSmith**?
