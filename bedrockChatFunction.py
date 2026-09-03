@@ -3,14 +3,17 @@ import os
 import boto3
 from botocore.exceptions import ClientError
 
-# --- Inicialização do Cliente Bedrock Runtime fora do handler para reuso de conexões ---
+# --- Inicialização dos clientes AWS fora do handler para reuso de conexões ---
 bedrock_runtime = boto3.client(service_name='bedrock-runtime')
+s3_client = boto3.client(service_name='s3')
 
 # --- Configurações padrão via variáveis de ambiente ---
 DEFAULT_MODEL_ID = os.environ.get('MODEL_ID', 'meta.llama3-8b-instruct-v1:0')
 GUARDRAIL_ID = os.environ.get('GUARDRAIL_ID', '')
 GUARDRAIL_VERSION = os.environ.get('GUARDRAIL_VERSION', 'DRAFT')
 ALLOWED_ORIGIN = os.environ.get('ALLOWED_ORIGIN', '*')
+DEFAULT_RAG_BUCKET = os.environ.get('RAG_BUCKET', 'lab-seguranca-ia-leandro')
+DEFAULT_RAG_KEY = os.environ.get('RAG_KEY', 'rag-docs/politica_reembolso.txt')
 
 # --- Headers CORS padronizados ---
 CORS_HEADERS = {
@@ -32,7 +35,7 @@ Configurações e Metadados Internos do Sistema:
 def lambda_handler(event, context):
     """
     Função Lambda que processa requisições de chat utilizando a Bedrock Converse API.
-    Suporta multi-modelos e inspeção completa de intervenções de Guardrails.
+    Suporta multi-modelos, RAG com busca real de documentos no S3 e inspeção de Guardrails.
     """
     http_method = event.get('requestContext', {}).get('http', {}).get('method', '')
 
@@ -49,9 +52,17 @@ def lambda_handler(event, context):
         try:
             body = json.loads(event.get('body', '{}'))
             user_message = body.get('message', '').strip()
-            use_guardrail = body.get('useGuardrail', True)
+            use_guardrail = body.get('useGuardrail', False)
             model_id = body.get('modelId', DEFAULT_MODEL_ID)
             
+            # Parâmetros para RAG no S3
+            use_rag = body.get('useRag', False)
+            rag_bucket = body.get('ragBucket', DEFAULT_RAG_BUCKET)
+            rag_key = body.get('ragKey', DEFAULT_RAG_KEY)
+            
+            rag_doc_loaded = False
+            rag_doc_name = None
+
             if not user_message:
                 return {
                     'statusCode': 400,
@@ -59,11 +70,36 @@ def lambda_handler(event, context):
                     'body': json.dumps({'error': 'A mensagem não pode estar vazia.'})
                 }
 
+            # --- Busca de Documento no S3 (RAG) se ativado ---
+            if use_rag:
+                try:
+                    print(f"INFO: Buscando documento RAG no S3 [s3://{rag_bucket}/{rag_key}]...")
+                    s3_response = s3_client.get_object(Bucket=rag_bucket, Key=rag_key)
+                    doc_content = s3_response['Body'].read().decode('utf-8')
+                    rag_doc_loaded = True
+                    rag_doc_name = rag_key
+
+                    effective_prompt = f"""Você é o Assistente Virtual Corporativo da TechFin Cloud.
+Responda à dúvida do colaborador utilizando as informações do documento oficial corporativo abaixo:
+
+--- DOCUMENTO RECUPERADO DA BASE DE CONHECIMENTO S3 ({rag_key}) ---
+{doc_content}
+--- FIM DO DOCUMENTO RECUPERADO ---
+
+Dúvida do Colaborador:
+{user_message}"""
+
+                except Exception as s3_err:
+                    print(f"ERRO ao buscar documento no S3: {s3_err}")
+                    effective_prompt = f"[Aviso: Falha ao carregar documento do S3 ({str(s3_err)})]\n\nPergunta do Usuário:\n{user_message}"
+            else:
+                effective_prompt = user_message
+
             # Montagem da mensagem no formato padrão da Converse API
             messages = [
                 {
                     "role": "user",
-                    "content": [{"text": user_message}]
+                    "content": [{"text": effective_prompt}]
                 }
             ]
 
@@ -89,7 +125,7 @@ def lambda_handler(event, context):
                 converse_args['guardrailConfig'] = {
                     'guardrailIdentifier': GUARDRAIL_ID,
                     'guardrailVersion': GUARDRAIL_VERSION,
-                    'trace': 'enabled'  # Habilita rastreabilidade detalhada da ação
+                    'trace': 'enabled'
                 }
             else:
                 print(f"INFO: Guardrail DESABILITADO. Modelo [{model_id}] executando sem filtros externos.")
@@ -99,12 +135,11 @@ def lambda_handler(event, context):
                 response = bedrock_runtime.converse(**converse_args)
             except ClientError as e:
                 error_msg = e.response.get('Error', {}).get('Message', '')
-                error_code = e.response.get('Error', {}).get('Code', '')
                 if 'system' in error_msg.lower() or 'not support system' in error_msg.lower():
                     print(f"AVISO: Modelo [{model_id}] não suporta parâmetro 'system'. Executando com instrução no corpo da mensagem.")
                     fallback_messages = [{
                         "role": "user",
-                        "content": [{"text": f"INSTRUÇÕES DO SISTEMA:\n{SYSTEM_PROMPT}\n\nMENSAGEM DO USUÁRIO:\n{user_message}"}]
+                        "content": [{"text": f"INSTRUÇÕES DO SISTEMA:\n{SYSTEM_PROMPT}\n\nMENSAGEM DO USUÁRIO:\n{effective_prompt}"}]
                     }]
                     converse_args.pop('system', None)
                     converse_args['messages'] = fallback_messages
@@ -127,6 +162,8 @@ def lambda_handler(event, context):
                 'stopReason': stop_reason,
                 'guardrailEnabled': bool(use_guardrail and GUARDRAIL_ID),
                 'guardrailIntervened': guardrail_intervened,
+                'ragDocumentLoaded': rag_doc_loaded,
+                'ragDocumentName': rag_doc_name,
                 'usage': response.get('usage', {})
             }
 
