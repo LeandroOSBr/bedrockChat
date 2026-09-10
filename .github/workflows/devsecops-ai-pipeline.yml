@@ -111,13 +111,21 @@ jobs:
           python-version: "3.12"
 
       - name: Verificar Presença das Secrets AWS no GitHub
+        env:
+          KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] || [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+          if [ -z "$KEY_ID" ] || [ -z "$SECRET_KEY" ]; then
             echo "::error title=Secrets AWS Ausentes::As Secrets 'AWS_ACCESS_KEY_ID' ou 'AWS_SECRET_ACCESS_KEY' não foram configuradas nas configurações do repositório."
             echo "Acesse https://github.com/${{ github.repository }}/settings/secrets/actions e adicione:"
             echo " - AWS_ACCESS_KEY_ID"
             echo " - AWS_SECRET_ACCESS_KEY"
             echo " - AWS_REGION (opcional, padrão: us-east-1)"
+            exit 1
+          fi
+
+          if [[ "$KEY_ID" == *"/"* ]]; then
+            echo "::error title=Chaves Invertidas no GitHub Secrets::A secret 'AWS_ACCESS_KEY_ID' contém o caractere barra ('/'). Isso indica que você colou a Secret Access Key no campo do Access Key ID! Lembre-se: o Access Key ID sempre começa com 'AKIA...' e contém apenas letras e números (sem barras)."
             exit 1
           fi
 
