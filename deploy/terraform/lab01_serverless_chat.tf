@@ -60,13 +60,26 @@ resource "aws_s3_bucket_policy" "frontend" {
   })
 }
 
-# Upload do arquivo chat.html diretamente para o S3
+# Injeção dinâmica dos endpoints e Guardrails no chat.html antes de subir para o S3
+locals {
+  chat_html_injected = replace(
+    replace(
+      file("${path.module}/../../chat.html"),
+      "__API_ENDPOINT__",
+      "${aws_apigatewayv2_api.http_api.api_endpoint}/chat"
+    ),
+    "__GUARDRAIL_ID__",
+    var.enable_guardrails ? aws_bedrock_guardrail.techfin_guardrail[0].guardrail_id : ""
+  )
+}
+
+# Upload do arquivo chat.html diretamente para o S3 com injeção automática de parâmetros
 resource "aws_s3_object" "chat_html" {
   bucket       = aws_s3_bucket.frontend.id
   key          = "chat.html"
-  source       = "${path.module}/../../chat.html"
+  content      = local.chat_html_injected
   content_type = "text/html"
-  etag         = filemd5("${path.module}/../../chat.html")
+  etag         = md5(local.chat_html_injected)
 }
 
 # ------------------------------------------------------------------------------

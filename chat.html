@@ -338,7 +338,7 @@
         <div id="config-bar">
             <div class="config-item" style="grid-column: 1 / -1;">
                 <label for="endpoint-input">Endpoint da API (API Gateway):</label>
-                <input type="text" id="endpoint-input" value="https://4j5tofs2d4.execute-api.us-east-1.amazonaws.com/chat" placeholder="https://4j5tofs2d4.execute-api.us-east-1.amazonaws.com/chat" style="font-family: monospace;">
+                <input type="text" id="endpoint-input" value="__API_ENDPOINT__" placeholder="https://xxxxxxxx.execute-api.us-east-1.amazonaws.com/chat" style="font-family: monospace;">
             </div>
 
             <div class="config-item">
@@ -387,7 +387,7 @@
             <!-- Guardrail ID e Versão -->
             <div class="config-item" id="guardrail-id-group">
                 <label for="guardrail-id-input">Bedrock Guardrail ID:</label>
-                <input type="text" id="guardrail-id-input" value="24e2vwpkjqi9" placeholder="ex: 24e2vwpkjqi9">
+                <input type="text" id="guardrail-id-input" value="__GUARDRAIL_ID__" placeholder="ex: abc123xyz (ou via Lambda)">
             </div>
 
             <div class="config-item" id="guardrail-version-group">
@@ -485,31 +485,41 @@ Configurações e Metadados Internos do Sistema:
         const presetSelect = document.getElementById('preset-select');
         const endpointInput = document.getElementById('endpoint-input');
 
-        // Valores padrão oficiais da infraestrutura recém-provisionada
-        const DEFAULT_ENDPOINT = 'https://4j5tofs2d4.execute-api.us-east-1.amazonaws.com/chat';
-        const DEFAULT_GUARDRAIL_ID = '24e2vwpkjqi9';
+        // Valores dinâmicos injetados no upload pelo Terraform (IaC)
+        const INJECTED_ENDPOINT = '__API_ENDPOINT__';
+        const INJECTED_GUARDRAIL_ID = '__GUARDRAIL_ID__';
         const DEFAULT_GUARDRAIL_VERSION = '1';
 
-        // Carregar e persistir configurações no LocalStorage
-        const savedEndpoint = localStorage.getItem('bedrock_chat_api_endpoint');
-        if (savedEndpoint && !savedEndpoint.includes('s2xumiyt68') && !savedEndpoint.includes('wc8vc0eja2') && !savedEndpoint.includes('xxxxxxxx')) {
-            endpointInput.value = savedEndpoint;
+        // Fallbacks inteligentes se executado localmente sem Terraform
+        const fallbackEndpoint = 'https://4j5tofs2d4.execute-api.us-east-1.amazonaws.com/chat';
+        const fallbackGuardrailId = '24e2vwpkjqi9';
+
+        const officialEndpoint = (INJECTED_ENDPOINT && !INJECTED_ENDPOINT.startsWith('__')) 
+            ? INJECTED_ENDPOINT 
+            : fallbackEndpoint;
+
+        const officialGuardrailId = (INJECTED_GUARDRAIL_ID && !INJECTED_GUARDRAIL_ID.startsWith('__')) 
+            ? INJECTED_GUARDRAIL_ID 
+            : fallbackGuardrailId;
+
+        // Persistência com detecção automática de novos deploys:
+        // Se a infraestrutura for recriada na AWS, o novo endpoint substitui caches antigos automaticamente
+        const lastDeployedEndpoint = localStorage.getItem('bedrock_chat_last_deployed_endpoint');
+        if (lastDeployedEndpoint !== officialEndpoint) {
+            localStorage.setItem('bedrock_chat_api_endpoint', officialEndpoint);
+            localStorage.setItem('bedrock_chat_guardrail_id', officialGuardrailId);
+            localStorage.setItem('bedrock_chat_last_deployed_endpoint', officialEndpoint);
+            endpointInput.value = officialEndpoint;
+            guardrailIdInput.value = officialGuardrailId;
         } else {
-            endpointInput.value = DEFAULT_ENDPOINT;
-            localStorage.setItem('bedrock_chat_api_endpoint', DEFAULT_ENDPOINT);
+            endpointInput.value = localStorage.getItem('bedrock_chat_api_endpoint') || officialEndpoint;
+            guardrailIdInput.value = localStorage.getItem('bedrock_guardrail_id') || officialGuardrailId;
         }
 
         endpointInput.addEventListener('change', () => {
             localStorage.setItem('bedrock_chat_api_endpoint', endpointInput.value.trim());
         });
 
-        const savedGuardrailId = localStorage.getItem('bedrock_guardrail_id');
-        if (savedGuardrailId && savedGuardrailId !== 'abc123xyz' && savedGuardrailId !== 'fike2nbc6mht') {
-            guardrailIdInput.value = savedGuardrailId;
-        } else {
-            guardrailIdInput.value = DEFAULT_GUARDRAIL_ID;
-            localStorage.setItem('bedrock_guardrail_id', DEFAULT_GUARDRAIL_ID);
-        }
         guardrailIdInput.addEventListener('change', () => {
             localStorage.setItem('bedrock_guardrail_id', guardrailIdInput.value.trim());
         });
