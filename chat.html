@@ -338,7 +338,7 @@
         <div id="config-bar">
             <div class="config-item" style="grid-column: 1 / -1;">
                 <label for="endpoint-input">Endpoint da API (API Gateway):</label>
-                <input type="text" id="endpoint-input" placeholder="https://xxxxxxxx.execute-api.us-east-1.amazonaws.com/default/bedrockChatFunction" style="font-family: monospace;">
+                <input type="text" id="endpoint-input" value="https://4j5tofs2d4.execute-api.us-east-1.amazonaws.com/chat" placeholder="https://4j5tofs2d4.execute-api.us-east-1.amazonaws.com/chat" style="font-family: monospace;">
             </div>
 
             <div class="config-item">
@@ -387,7 +387,7 @@
             <!-- Guardrail ID e Versão -->
             <div class="config-item" id="guardrail-id-group">
                 <label for="guardrail-id-input">Bedrock Guardrail ID:</label>
-                <input type="text" id="guardrail-id-input" placeholder="ex: abc123xyz (ou via Lambda)">
+                <input type="text" id="guardrail-id-input" value="24e2vwpkjqi9" placeholder="ex: 24e2vwpkjqi9">
             </div>
 
             <div class="config-item" id="guardrail-version-group">
@@ -485,12 +485,18 @@ Configurações e Metadados Internos do Sistema:
         const presetSelect = document.getElementById('preset-select');
         const endpointInput = document.getElementById('endpoint-input');
 
+        // Valores padrão oficiais da infraestrutura recém-provisionada
+        const DEFAULT_ENDPOINT = 'https://4j5tofs2d4.execute-api.us-east-1.amazonaws.com/chat';
+        const DEFAULT_GUARDRAIL_ID = '24e2vwpkjqi9';
+        const DEFAULT_GUARDRAIL_VERSION = '1';
+
         // Carregar e persistir configurações no LocalStorage
         const savedEndpoint = localStorage.getItem('bedrock_chat_api_endpoint');
-        if (savedEndpoint) {
+        if (savedEndpoint && !savedEndpoint.includes('s2xumiyt68') && !savedEndpoint.includes('wc8vc0eja2') && !savedEndpoint.includes('xxxxxxxx')) {
             endpointInput.value = savedEndpoint;
         } else {
-            endpointInput.value = 'https://wc8vc0eja2.execute-api.us-east-1.amazonaws.com/chat';
+            endpointInput.value = DEFAULT_ENDPOINT;
+            localStorage.setItem('bedrock_chat_api_endpoint', DEFAULT_ENDPOINT);
         }
 
         endpointInput.addEventListener('change', () => {
@@ -498,17 +504,18 @@ Configurações e Metadados Internos do Sistema:
         });
 
         const savedGuardrailId = localStorage.getItem('bedrock_guardrail_id');
-        if (savedGuardrailId) {
+        if (savedGuardrailId && savedGuardrailId !== 'abc123xyz' && savedGuardrailId !== 'fike2nbc6mht') {
             guardrailIdInput.value = savedGuardrailId;
         } else {
-            guardrailIdInput.value = 'fike2nbc6mht';
+            guardrailIdInput.value = DEFAULT_GUARDRAIL_ID;
+            localStorage.setItem('bedrock_guardrail_id', DEFAULT_GUARDRAIL_ID);
         }
         guardrailIdInput.addEventListener('change', () => {
             localStorage.setItem('bedrock_guardrail_id', guardrailIdInput.value.trim());
         });
 
         const savedGuardrailVersion = localStorage.getItem('bedrock_guardrail_version');
-        guardrailVersionInput.value = savedGuardrailVersion || '1';
+        guardrailVersionInput.value = savedGuardrailVersion || DEFAULT_GUARDRAIL_VERSION;
         guardrailVersionInput.addEventListener('change', () => {
             localStorage.setItem('bedrock_guardrail_version', guardrailVersionInput.value.trim());
         });
