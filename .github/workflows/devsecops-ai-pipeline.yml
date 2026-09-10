@@ -45,6 +45,9 @@ permissions:
   id-token: write
   pull-requests: write
 
+env:
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
+
 jobs:
   # ============================================================================
   # JOB 1: Linting e Validação Estática (Shift-Left IaC)
@@ -106,6 +109,17 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Verificar Presença das Secrets AWS no GitHub
+        run: |
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] || [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "::error title=Secrets AWS Ausentes::As Secrets 'AWS_ACCESS_KEY_ID' ou 'AWS_SECRET_ACCESS_KEY' não foram configuradas nas configurações do repositório."
+            echo "Acesse https://github.com/${{ github.repository }}/settings/secrets/actions e adicione:"
+            echo " - AWS_ACCESS_KEY_ID"
+            echo " - AWS_SECRET_ACCESS_KEY"
+            echo " - AWS_REGION (opcional, padrão: us-east-1)"
+            exit 1
+          fi
 
       - name: Configurar Credenciais AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -184,6 +198,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Verificar Presença das Secrets AWS no GitHub
+        run: |
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] || [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "::error title=Secrets AWS Ausentes::As Secrets 'AWS_ACCESS_KEY_ID' ou 'AWS_SECRET_ACCESS_KEY' não foram configuradas."
+            exit 1
+          fi
 
       - name: Configurar Credenciais AWS
         uses: aws-actions/configure-aws-credentials@v4
