@@ -156,6 +156,34 @@ jobs:
           echo "> [!IMPORTANT]" >> $GITHUB_STEP_SUMMARY
           echo "> O plano de infraestrutura foi gerado com sucesso! A etapa de **Apply** exigirá aprovação manual no ambiente **production** antes de efetivar quaisquer mudanças na AWS." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Adicionar tabela de outputs do estado atual (se houver infraestrutura já gerenciada)
+          if terraform -chdir=deploy/terraform output -json > outputs.json 2>/dev/null && [ $(jq 'keys | length' outputs.json) -gt 0 ]; then
+            echo "#### 🌐 Outputs da Infraestrutura (State Remoto):" >> $GITHUB_STEP_SUMMARY
+            echo "| Recurso | Identificador / URL | Descrição |" >> $GITHUB_STEP_SUMMARY
+            echo "| :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+
+            S3_URL=$(jq -r '.s3_website_url.value // empty' outputs.json)
+            API_URL=$(jq -r '.api_chat_endpoint.value // empty' outputs.json)
+            GW_URL=$(jq -r '.api_gateway_url.value // empty' outputs.json)
+            GUARD_ID=$(jq -r '.guardrail_id.value // empty' outputs.json)
+            GUARD_VER=$(jq -r '.guardrail_version.value // empty' outputs.json)
+            LAMBDA_NAME=$(jq -r '.lambda_function_name.value // empty' outputs.json)
+            FRONT_BUCKET=$(jq -r '.frontend_bucket_name.value // empty' outputs.json)
+            RAG_BUCKET=$(jq -r '.rag_bucket_name.value // empty' outputs.json)
+            CW_LOG=$(jq -r '.cloudwatch_log_group_invocations.value // empty' outputs.json)
+
+            [ -n "$S3_URL" ] && echo "| 🌐 **Frontend Web (chat.html)** | [$S3_URL]($S3_URL) | Interface gráfica para testes |" >> $GITHUB_STEP_SUMMARY
+            [ -n "$API_URL" ] && echo "| ⚡ **API Chat Endpoint** | \`$API_URL\` | Endpoint POST utilizado pelo chat |" >> $GITHUB_STEP_SUMMARY
+            [ -n "$GW_URL" ] && echo "| 🔗 **API Gateway Base** | \`$GW_URL\` | URL base do HTTP API Gateway |" >> $GITHUB_STEP_SUMMARY
+            [ -n "$GUARD_ID" ] && echo "| 🛡️ **Bedrock Guardrail** | \`$GUARD_ID\` (v$GUARD_VER) | Identificador da política ativa |" >> $GITHUB_STEP_SUMMARY
+            [ -n "$LAMBDA_NAME" ] && echo "| ⚙️ **Lambda Function** | \`$LAMBDA_NAME\` | Função de backend serverless |" >> $GITHUB_STEP_SUMMARY
+            [ -n "$FRONT_BUCKET" ] && echo "| 🪣 **Frontend Bucket S3** | \`$FRONT_BUCKET\` | Hospedagem estática |" >> $GITHUB_STEP_SUMMARY
+            [ -n "$RAG_BUCKET" ] && echo "| 📚 **RAG Bucket S3** | \`$RAG_BUCKET\` | Base de conhecimento RAG |" >> $GITHUB_STEP_SUMMARY
+            [ -n "$CW_LOG" ] && echo "| 📋 **CloudWatch Log Group** | \`$CW_LOG\` | Auditoria de logs Bedrock |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
           echo "<details><summary>🔍 Clique para expandir o Terraform Plan detalhado</summary>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```terraform' >> $GITHUB_STEP_SUMMARY
@@ -222,17 +250,38 @@ jobs:
       - name: Exportar Outputs da Infraestrutura
         id: export-output
         run: |
-          API_URL=$(terraform -chdir=deploy/terraform output -raw api_chat_endpoint)
-          S3_URL=$(terraform -chdir=deploy/terraform output -raw s3_website_url)
-          GUARDRAIL_ID=$(terraform -chdir=deploy/terraform output -raw guardrail_id)
+          terraform -chdir=deploy/terraform output -json > apply_outputs.json
+          
+          API_URL=$(jq -r '.api_chat_endpoint.value // empty' apply_outputs.json)
+          S3_URL=$(jq -r '.s3_website_url.value // empty' apply_outputs.json)
+          GW_URL=$(jq -r '.api_gateway_url.value // empty' apply_outputs.json)
+          GUARD_ID=$(jq -r '.guardrail_id.value // empty' apply_outputs.json)
+          GUARD_VER=$(jq -r '.guardrail_version.value // empty' apply_outputs.json)
+          LAMBDA_NAME=$(jq -r '.lambda_function_name.value // empty' apply_outputs.json)
+          FRONT_BUCKET=$(jq -r '.frontend_bucket_name.value // empty' apply_outputs.json)
+          RAG_BUCKET=$(jq -r '.rag_bucket_name.value // empty' apply_outputs.json)
+          CW_LOG=$(jq -r '.cloudwatch_log_group_invocations.value // empty' apply_outputs.json)
+
           echo "api_chat_endpoint=$API_URL" >> $GITHUB_OUTPUT
           echo "s3_website_url=$S3_URL" >> $GITHUB_OUTPUT
-          echo "guardrail_id=$GUARDRAIL_ID" >> $GITHUB_OUTPUT
+          echo "guardrail_id=$GUARD_ID" >> $GITHUB_OUTPUT
 
-          echo "### 🚀 Infraestrutura Provisionada com Sucesso!" >> $GITHUB_STEP_SUMMARY
-          echo "- **API Chat Endpoint:** \`$API_URL\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **S3 Web Frontend:** $S3_URL" >> $GITHUB_STEP_SUMMARY
-          echo "- **Bedrock Guardrail ID:** \`$GUARDRAIL_ID\`" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Relatório de Outputs do Terraform Apply" >> $GITHUB_STEP_SUMMARY
+          echo "Todos os recursos foram provisionados e consolidados com sucesso na AWS:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Recurso | Identificador / URL | Descrição |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🌐 **Frontend Web (chat.html)** | [$S3_URL]($S3_URL) | Interface gráfica para testes |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⚡ **API Chat Endpoint** | \`$API_URL\` | Endpoint POST utilizado pelo chat |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔗 **API Gateway Base** | \`$GW_URL\` | URL base do HTTP API Gateway |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🛡️ **Bedrock Guardrail** | \`$GUARD_ID\` (v$GUARD_VER) | Identificador da política ativa |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⚙️ **Lambda Function** | \`$LAMBDA_NAME\` | Função de backend serverless |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🪣 **Frontend Bucket S3** | \`$FRONT_BUCKET\` | Hospedagem estática |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📚 **RAG Bucket S3** | \`$RAG_BUCKET\` | Base de conhecimento RAG |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📋 **CloudWatch Log Group** | \`$CW_LOG\` | Auditoria de logs Bedrock |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> [!TIP]" >> $GITHUB_STEP_SUMMARY
+          echo "> Para acessar a aplicação, clique no link do **Frontend Web** acima. O chat já vem pré-configurado para conectar ao endpoint da API e ao Guardrail recém-provisionados." >> $GITHUB_STEP_SUMMARY
 
   # ============================================================================
   # JOB 4: Security Gate com Red Teaming Automatizado
