@@ -110,30 +110,39 @@ Para habilitar a execução da pipeline:
    - `AWS_SECRET_ACCESS_KEY`: Chave secreta de acesso do IAM.
    - `AWS_REGION`: Região da AWS (ex: `us-east-1`).
 
-### 🔄 Como Funciona o Security Quality Gate
+### 🔄 Como Funciona o Fluxo com Gate de Aprovação (Plan -> Approval -> Apply)
 ```
-[ Pull Request / Commit ]
-         │
-         ▼
-[ 1. Linting & Validate ] ──(terraform fmt + validate + py_compile)
-         │
-         ▼
-[ 2. Terraform Deploy ] ──(Provisiona S3, API GW, Lambda e Bedrock Guardrail)
-         │
-         ▼
-[ 3. Automated Red Teaming ] ──(Dispara 5 ataques do OWASP Top 10)
-         │
-         ├── Se vulnerável? ──> ❌ BUILD FAIL (Bloqueia promoção de IA insegura)
-         └── Se protegido?  ──> ✅ BUILD PASS (Emite relatório no Step Summary)
+[ Pull Request / Commit / Dispatch ]
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│ 1. Linting & Validação Estática │  -> `terraform fmt -check`, `terraform validate`, `py_compile`
+└────────────────┬────────────────┘
+                 ▼
+┌─────────────────────────────────┐
+│ 2. Terraform Plan               │  -> Gera o `tfplan`, exibe o resumo completo no Step Summary
+└────────────────┬────────────────┘     e faz upload do artefato do plano.
+                 ▼
+     ⏸️ GATE DE APROVAÇÃO MANUAL ⏸️  -> O GitHub pausa o workflow no environment `production`
+                 │                      e aguarda o clique em "Review deployments" -> "Approve and deploy".
+                 ▼ (Após Aprovação)
+┌─────────────────────────────────┐
+│ 3. Terraform Apply              │  -> Executa estritamente o `tfplan` aprovado.
+└────────────────┬────────────────┘
+                 ▼
+┌─────────────────────────────────┐
+│ 4. Red Team Security Gate       │  -> Dispara os 5 testes OWASP Top 10 (LAB 02) contra a API
+└────────────────┬────────────────┘
+                 │
+                 ├── Se vulnerável (ex: sem Guardrail)? ──> ❌ BUILD FAIL (Bloqueia promoção)
+                 └── Se protegido?                      ──> ✅ BUILD PASS (Relatório no Step Summary)
 ```
 
-### 🎮 Disparo Manual (Workflow Dispatch)
-Na aba **Actions** do GitHub, você pode disparar o workflow sob demanda com opções personalizadas:
-- **`action = apply`**: Executa o provisionamento e roda a suíte de testes de Red Teaming.
-- **`action = destroy`**: Destrói todos os recursos criados na AWS diretamente pelo GitHub.
-- **`action = red-team-only`**: Dispara apenas os testes ofensivos contra a infraestrutura existente.
-- **`enable_guardrails = false`**: Permite demonstrar o build falhando propositalmente quando a IA está desprotegida!
-
+### 🛡️ Configurando a Aprovação Manual no GitHub:
+1. No seu repositório GitHub, acesse **Settings** > **Environments**.
+2. Clique no ambiente **`production`** (criado automaticamente pelo workflow, ou crie clicando em *New environment* com o nome `production`).
+3. Marque a opção **Required reviewers** e adicione o seu usuário.
+4. Pronto! A partir desse momento, o Terraform Plan será executado e o GitHub exibirá um botão amarelo **"Review deployments"** exigindo que você aprove explicitamente antes de disparar o `terraform apply`!
 ---
 
 ## 🧹 Destruição do Ambiente (Clean Up)

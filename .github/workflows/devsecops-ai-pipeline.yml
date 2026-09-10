@@ -89,17 +89,13 @@ jobs:
           terraform -chdir=deploy/terraform validate
 
   # ============================================================================
-  # JOB 2: Planejamento / Deploy de Infraestrutura como Código (Terraform)
+  # JOB 2: Planejamento de Infraestrutura (Terraform Plan)
   # ============================================================================
-  terraform-deploy:
-    name: "2. Terraform Deploy & Guardrails"
+  terraform-plan:
+    name: "2. Terraform Plan (Geração do Plano)"
     runs-on: ubuntu-latest
     needs: lint-and-validate
-    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.action != 'red-team-only' }}
-    outputs:
-      api_chat_endpoint: ${{ steps.export-output.outputs.api_chat_endpoint }}
-      s3_website_url: ${{ steps.export-output.outputs.s3_website_url }}
-      guardrail_id: ${{ steps.export-output.outputs.guardrail_id }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (github.event.inputs.action != 'destroy' && github.event.inputs.action != 'red-team-only') }}
 
     steps:
       - name: Checkout do Repositório
@@ -117,15 +113,12 @@ jobs:
         run: |
           if [ -z "$KEY_ID" ] || [ -z "$SECRET_KEY" ]; then
             echo "::error title=Secrets AWS Ausentes::As Secrets 'AWS_ACCESS_KEY_ID' ou 'AWS_SECRET_ACCESS_KEY' não foram configuradas nas configurações do repositório."
-            echo "Acesse https://github.com/${{ github.repository }}/settings/secrets/actions e adicione:"
-            echo " - AWS_ACCESS_KEY_ID"
-            echo " - AWS_SECRET_ACCESS_KEY"
-            echo " - AWS_REGION (opcional, padrão: us-east-1)"
+            echo "Acesse https://github.com/${{ github.repository }}/settings/secrets/actions e adicione as secrets."
             exit 1
           fi
 
           if [[ "$KEY_ID" == *"/"* ]]; then
-            echo "::error title=Chaves Invertidas no GitHub Secrets::A secret 'AWS_ACCESS_KEY_ID' contém o caractere barra ('/'). Isso indica que você colou a Secret Access Key no campo do Access Key ID! Lembre-se: o Access Key ID sempre começa com 'AKIA...' e contém apenas letras e números (sem barras)."
+            echo "::error title=Chaves Invertidas::A secret 'AWS_ACCESS_KEY_ID' contém uma barra ('/'). Você colou a Secret Access Key no lugar do Access Key ID!"
             exit 1
           fi
 
@@ -145,32 +138,89 @@ jobs:
         run: |
           terraform -chdir=deploy/terraform init
 
-      # Execução de DESTROY sob demanda
-      - name: Terraform Destroy (Teardown)
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy' }}
-        run: |
-          terraform -chdir=deploy/terraform destroy -auto-approve
-
-      # Execução de PLAN em Pull Requests ou dispatch "plan-only"
-      - name: Terraform Plan
-        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'plan-only') }}
+      - name: Executar Terraform Plan
         id: plan
-        run: |
-          terraform -chdir=deploy/terraform plan -no-color
-
-      # Execução de APPLY em merges para main ou dispatch "apply"
-      - name: Terraform Apply
-        if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply') }}
         run: |
           FLAGS=""
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             FLAGS="-var=enable_guardrails=${{ github.event.inputs.enable_guardrails }} -var=enable_observability=${{ github.event.inputs.enable_observability }}"
           fi
-          terraform -chdir=deploy/terraform apply -auto-approve $FLAGS
+
+          terraform -chdir=deploy/terraform plan -out=tfplan $FLAGS -no-color | tee plan_output.txt
+          
+          PLAN_SUMMARY=$(grep -E 'Plan: [0-9]+ to add, [0-9]+ to change, [0-9]+ to destroy' plan_output.txt || echo "Nenhuma alteração estrutural.")
+          
+          echo "### 📋 Relatório do Terraform Plan" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** \`$PLAN_SUMMARY\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> [!IMPORTANT]" >> $GITHUB_STEP_SUMMARY
+          echo "> O plano de infraestrutura foi gerado com sucesso! A etapa de **Apply** exigirá aprovação manual no ambiente **production** antes de efetivar quaisquer mudanças na AWS." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "<details><summary>🔍 Clique para expandir o Terraform Plan detalhado</summary>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```terraform' >> $GITHUB_STEP_SUMMARY
+          cat plan_output.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
+
+      - name: Salvar Artefatos do Plano (tfplan e zip)
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-artifact
+          path: |
+            deploy/terraform/tfplan
+            deploy/terraform/bedrockChatFunction.zip
+          retention-days: 2
+
+  # ============================================================================
+  # JOB 3: Aplicação de Infraestrutura (Terraform Apply) com GATE DE APROVAÇÃO
+  # ============================================================================
+  terraform-apply:
+    name: "3. Terraform Apply (Requer Aprovação Manual)"
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    # O uso do environment 'production' ativa a aprovação manual nativa do GitHub Actions
+    environment: production
+    if: |
+      github.event_name != 'pull_request' &&
+      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'))
+    outputs:
+      api_chat_endpoint: ${{ steps.export-output.outputs.api_chat_endpoint }}
+      s3_website_url: ${{ steps.export-output.outputs.s3_website_url }}
+      guardrail_id: ${{ steps.export-output.outputs.guardrail_id }}
+
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Baixar Artefatos do Plano
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan-artifact
+          path: deploy/terraform
+
+      - name: Configurar Credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Configurar Terraform CLI
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      - name: Terraform Init
+        run: |
+          terraform -chdir=deploy/terraform init
+
+      - name: Terraform Apply (Executando o Plano Aprovado)
+        run: |
+          terraform -chdir=deploy/terraform apply -auto-approve tfplan
 
       - name: Exportar Outputs da Infraestrutura
         id: export-output
-        if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply') }}
         run: |
           API_URL=$(terraform -chdir=deploy/terraform output -raw api_chat_endpoint)
           S3_URL=$(terraform -chdir=deploy/terraform output -raw s3_website_url)
@@ -185,18 +235,15 @@ jobs:
           echo "- **Bedrock Guardrail ID:** \`$GUARDRAIL_ID\`" >> $GITHUB_STEP_SUMMARY
 
   # ============================================================================
-  # JOB 3: Security Gate com Red Teaming Automatizado (DevSecOps Quality Gate)
+  # JOB 4: Security Gate com Red Teaming Automatizado
   # ============================================================================
   security-gate-redteam:
-    name: "3. Security Gate (OWASP Red Teaming)"
+    name: "4. Security Gate (OWASP Red Teaming)"
     runs-on: ubuntu-latest
-    needs: terraform-deploy
+    needs: terraform-apply
     if: |
       always() && 
-      (needs.terraform-deploy.result == 'success' || github.event.inputs.action == 'red-team-only') &&
-      github.event.inputs.action != 'destroy' &&
-      github.event.inputs.action != 'plan-only' &&
-      github.event_name != 'pull_request'
+      needs.terraform-apply.result == 'success'
 
     steps:
       - name: Checkout do Repositório
@@ -207,12 +254,25 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Verificar Presença das Secrets AWS no GitHub
+      - name: Executar Suíte de Testes Ofensivos OWASP Top 10 (LAB 02)
         run: |
-          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] || [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
-            echo "::error title=Secrets AWS Ausentes::As Secrets 'AWS_ACCESS_KEY_ID' ou 'AWS_SECRET_ACCESS_KEY' não foram configuradas."
-            exit 1
-          fi
+          API_URL="${{ needs.terraform-apply.outputs.api_chat_endpoint }}"
+          echo "Disparando testes de segurança contra: $API_URL"
+          python deploy/terraform/tests/test_lab02_owasp_redteam.py --url "$API_URL" --fail-on-vuln
+
+  # ============================================================================
+  # JOB 5: Teardown sob Demanda (Terraform Destroy) com GATE DE APROVAÇÃO
+  # ============================================================================
+  terraform-destroy:
+    name: "Teardown (Terraform Destroy - Requer Aprovação)"
+    runs-on: ubuntu-latest
+    needs: lint-and-validate
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy' }}
+    environment: production
+
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
 
       - name: Configurar Credenciais AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -230,12 +290,7 @@ jobs:
         run: |
           terraform -chdir=deploy/terraform init
 
-      - name: Executar Suíte de Testes Ofensivos OWASP Top 10 (LAB 02)
+      - name: Executar Terraform Destroy
         run: |
-          API_URL="${{ needs.terraform-deploy.outputs.api_chat_endpoint }}"
-          if [ -z "$API_URL" ]; then
-            API_URL=$(terraform -chdir=deploy/terraform output -raw api_chat_endpoint)
-          fi
-
-          echo "Disparando testes de segurança contra: $API_URL"
-          python deploy/terraform/tests/test_lab02_owasp_redteam.py --url "$API_URL" --fail-on-vuln
+          terraform -chdir=deploy/terraform destroy -auto-approve
+          echo "### 🧹 Todos os recursos foram destruídos com sucesso na AWS!" >> $GITHUB_STEP_SUMMARY

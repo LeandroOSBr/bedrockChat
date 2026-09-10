@@ -214,27 +214,33 @@ No seu repositório GitHub, navegue até **Settings > Secrets and variables > Ac
 - `AWS_SECRET_ACCESS_KEY`
 - `AWS_REGION` (ex: `us-east-1`)
 
-#### 2. Os 3 Estágios da Pipeline:
+#### 2. Os 4 Estágios da Pipeline com Gate de Aprovação:
 ```
-┌───────────────────────────┐      ┌───────────────────────────┐      ┌───────────────────────────┐
-│ 1. Lint & Validate        │ ---> │ 2. Terraform Deploy       │ ---> │ 3. Red Team Security Gate │
-│ (fmt, validate, py_compile│      │ (S3, Lambda, Guardrail)   │      │ (5 Ataques OWASP Top 10)  │
-└───────────────────────────┘      └───────────────────────────┘      └─────────────┬─────────────┘
-                                                                                    │
-                                               ┌────────────────────────────────────┴────────────────────────────────────┐
-                                               ▼                                                                         ▼
-                                      [ ✅ 100% Protegido ]                                                    [ ❌ Vulnerabilidade ]
-                                      Pipeline Aprovada (PASS)                                                  Pipeline Abortada (FAIL)
+┌───────────────────────────┐      ┌───────────────────────────┐      ┌───────────────────────────┐      ┌───────────────────────────┐
+│ 1. Lint & Validate        │ ---> │ 2. Terraform Plan         │ ---> │ 3. Terraform Apply        │ ---> │ 4. Red Team Security Gate │
+│ (fmt, validate, py_compile│      │ (Gera resumo tfplan)      │  ⏸️  │ (Requer Aprovação Manual) │      │ (5 Ataques OWASP Top 10)  │
+└───────────────────────────┘      └───────────────────────────┘      └───────────────────────────┘      └─────────────┬─────────────┘
+                                                                                                                       │
+                                                                                  ┌────────────────────────────────────┴────────────────────────────────────┐
+                                                                                  ▼                                                                         ▼
+                                                                         [ ✅ 100% Protegido ]                                                    [ ❌ Vulnerabilidade ]
+                                                                         Pipeline Aprovada (PASS)                                                  Pipeline Abortada (FAIL)
 ```
 
-#### 3. Exercício de Simulação: Forçar a Quebra do Security Gate
+#### 3. Configurando a Aprovação Manual (*Required Reviewers*):
+1. Acesse **Settings > Environments > production** no repositório.
+2. Ative **Required reviewers** e informe seu usuário.
+3. Ao rodar o workflow, o GitHub executará o **Terraform Plan**, gerará o resumo completo no Step Summary e pausará a esteira, aguardando você clicar no botão **"Review deployments"** para autorizar o **Terraform Apply**.
+
+#### 4. Exercício de Simulação: Forçar a Quebra do Security Gate
 1. Vá até a aba **Actions** no GitHub e selecione o workflow **DevSecOps GenAI Pipeline**.
 2. Clique em **Run workflow**:
    - Defina `action` como `apply`.
    - **Desmarque** o checkbox `enable_guardrails` (simulando um desenvolvedor tentando subir uma IA sem proteções).
 3. **Resultado:** 
-   - A etapa 2 provisionará a aplicação insegura.
-   - A etapa 3 (Security Gate) executará os ataques do OWASP Top 10 e detectará vazamento de PII e injeção de prompt.
+   - A etapa de Plan mostrará as mudanças.
+   - Após aprovação, a aplicação insegura é provisionada.
+   - A etapa 4 (Security Gate) executará os ataques do OWASP Top 10 e detectará vazamento de PII e injeção de prompt.
    - A pipeline emitirá **Exit Code 1**, marcando o **Job como FALHO (vermelho)** e impedindo a homologação da release!
 
 ---
