@@ -9,7 +9,9 @@
       ],
       "Resource": [
         "arn:aws:s3:::techfin-bedrock-chat-*",
-        "arn:aws:s3:::techfin-bedrock-chat-*/*"
+        "arn:aws:s3:::techfin-bedrock-chat-*/*",
+        "arn:aws:s3:::techfin-tfstate-947675433597",
+        "arn:aws:s3:::techfin-tfstate-947675433597/*"
       ]
     },
     {
