@@ -5,30 +5,7 @@
       "Sid": "S3Management",
       "Effect": "Allow",
       "Action": [
-        "s3:CreateBucket",
-        "s3:DeleteBucket",
-        "s3:ListBucket",
-        "s3:GetBucketLocation",
-        "s3:GetBucketAcl",
-        "s3:PutBucketAcl",
-        "s3:GetBucketPolicy",
-        "s3:PutBucketPolicy",
-        "s3:DeleteBucketPolicy",
-        "s3:GetBucketWebsite",
-        "s3:PutBucketWebsite",
-        "s3:DeleteBucketWebsite",
-        "s3:GetBucketPublicAccessBlock",
-        "s3:PutBucketPublicAccessBlock",
-        "s3:DeleteBucketPublicAccessBlock",
-        "s3:GetBucketOwnershipControls",
-        "s3:PutBucketOwnershipControls",
-        "s3:DeleteBucketOwnershipControls",
-        "s3:GetBucketTagging",
-        "s3:PutBucketTagging",
-        "s3:GetObject",
-        "s3:PutObject",
-        "s3:DeleteObject",
-        "s3:GetObjectVersion"
+        "s3:*"
       ],
       "Resource": [
         "arn:aws:s3:::techfin-bedrock-chat-*",
@@ -95,26 +72,9 @@
       ],
       "Resource": [
         "arn:aws:iam::*:role/techfin-bedrock-chat-*",
-        "arn:aws:iam::*:policy/techfin-bedrock-chat-*"
+        "arn:aws:iam::*:policy/techfin-bedrock-chat-*",
+        "arn:aws:iam::aws:policy/*"
       ]
-    },
-    {
-      "Sid": "IAMAttachPredefinedPolicies",
-      "Effect": "Allow",
-      "Action": [
-        "iam:AttachRolePolicy",
-        "iam:DetachRolePolicy"
-      ],
-      "Resource": "arn:aws:iam::*:role/techfin-bedrock-chat-*",
-      "Condition": {
-        "ArnEquals": {
-          "iam:PolicyARN": [
-            "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-            "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess",
-            "arn:aws:iam::aws:policy/CloudWatchLambdaApplicationSignalsExecutionRolePolicy"
-          ]
-        }
-      }
     },
     {
       "Sid": "BedrockGuardrailsAndLogging",
@@ -132,7 +92,19 @@
         "bedrock:ListTagsForResource",
         "bedrock:PutModelInvocationLoggingConfiguration",
         "bedrock:GetModelInvocationLoggingConfiguration",
-        "bedrock:DeleteModelInvocationLoggingConfiguration"
+        "bedrock:DeleteModelInvocationLoggingConfiguration",
+        "bedrock:Converse",
+        "bedrock:ApplyGuardrail",
+        "bedrock:InvokeModel"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudWatchLogsDescribe",
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams"
       ],
       "Resource": "*"
     },
@@ -142,7 +114,6 @@
       "Action": [
         "logs:CreateLogGroup",
         "logs:DeleteLogGroup",
-        "logs:DescribeLogGroups",
         "logs:PutRetentionPolicy",
         "logs:DeleteRetentionPolicy",
         "logs:ListTagsForResource",
