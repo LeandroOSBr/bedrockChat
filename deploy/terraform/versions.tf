@@ -25,7 +25,7 @@ provider "aws" {
       Project     = "TechFin-Bedrock-Chat"
       ManagedBy   = "Terraform"
       Environment = var.environment
-      Course      = "Cloud Computing & AI Security"
+      Course      = "Cloud-Computing-AI-Security"
     }
   }
 }
