@@ -37,11 +37,7 @@
       "Sid": "ApiGatewayManagement",
       "Effect": "Allow",
       "Action": [
-        "apigateway:GET",
-        "apigateway:POST",
-        "apigateway:PUT",
-        "apigateway:PATCH",
-        "apigateway:DELETE"
+        "apigateway:*"
       ],
       "Resource": "arn:aws:apigateway:*::/*"
     },
@@ -62,6 +58,8 @@
         "iam:GetPolicy",
         "iam:GetPolicyVersion",
         "iam:ListPolicyVersions",
+        "iam:TagPolicy",
+        "iam:UntagPolicy",
         "iam:AttachRolePolicy",
         "iam:DetachRolePolicy",
         "iam:PutRolePolicy",
