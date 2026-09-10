@@ -1,0 +1,40 @@
+# ==============================================================================
+# TechFin Bedrock Chat - Variáveis de Configuração do Terraform
+# ==============================================================================
+# Instruções: Copie este arquivo para 'terraform.tfvars' e ajuste se necessário:
+#   cp terraform.tfvars.example terraform.tfvars
+# ==============================================================================
+
+aws_region   = "us-east-1"
+project_name = "techfin-bedrock-chat"
+environment  = "dev"
+
+# Modelo padrão do Amazon Bedrock
+default_model_id = "meta.llama3-8b-instruct-v1:0"
+
+# ------------------------------------------------------------------------------
+# Feature Flags Didáticas (Ciclo de Aprendizagem DevSecOps)
+# ------------------------------------------------------------------------------
+# 1. Para executar o LAB 01 + LAB 02 (Chat Inseguro + Testes de Ataque OWASP):
+#    enable_guardrails           = false
+#    enable_contextual_grounding = false
+#    enable_observability        = false
+#
+# 2. Para aplicar a Defesa Ativa via Guardrail (LAB 03):
+#    enable_guardrails           = true
+#    enable_contextual_grounding = false
+#    enable_observability        = false
+#
+# 3. Para aplicar RAG Hardening com Contextual Grounding (LAB 04):
+#    enable_guardrails           = true
+#    enable_contextual_grounding = true
+#    enable_observability        = false
+#
+# 4. Para subir todo o ecossistema com Observabilidade Total (LAB 05 + LAB 06):
+enable_guardrails           = true
+enable_contextual_grounding = true
+enable_observability        = true
+
+lambda_timeout     = 90
+lambda_memory_size = 256
+bedrock_logging_retention_in_days = 7

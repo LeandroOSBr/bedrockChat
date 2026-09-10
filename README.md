@@ -43,6 +43,7 @@ A disciplina é estruturada em 4 laboratórios modulares:
 | **LAB 03** | [`labs/LAB03_Bedrock_Guardrails_Setup.md`](labs/LAB03_Bedrock_Guardrails_Setup.md) | Criação de Guardrails no console AWS, configuração de políticas de conteúdo/Jailbreak/PII e testes comparativos (*Before vs After*). |
 | **LAB 04** | [`labs/LAB04_RAG_and_Data_Poisoning.md`](labs/LAB04_RAG_and_Data_Poisoning.md) | Simulação de RAG, envenenamento de documentos (*Indirect Prompt Injection*) e mitigação com **Contextual Grounding**. |
 | **LAB 05** | [`labs/LAB05_Observability_XRay_ApplicationSignals.md`](labs/LAB05_Observability_XRay_ApplicationSignals.md) | Observabilidade e monitoramento de GenAI com **AWS X-Ray** e **CloudWatch Application Signals**. |
+| **LAB 06** | [`labs/LAB06_DevSecOps_Terraform_Guardrails.md`](labs/LAB06_DevSecOps_Terraform_Guardrails.md) | **DevSecOps para IA**: Automação completa de infraestrutura e Guardrails como código via **Terraform** e testes automatizados de Red Teaming. |
 
 ---
 
@@ -53,12 +54,25 @@ bedrockChat/
 ├── README.md                                <- Documento principal e visão geral da disciplina
 ├── bedrockChatFunction.py                   <- Função Lambda backend (Bedrock Converse API)
 ├── chat.html                                <- Frontend web educacional com presets OWASP e telemetria
+├── deploy/
+│   └── terraform/                           <- Automação completa de IaC e DevSecOps para IA
+│       ├── versions.tf                      <- Provedores AWS, Archive e Random
+│       ├── variables.tf / terraform.tfvars  <- Configurações e Feature Flags
+│       ├── lab01_serverless_chat.tf         <- S3 web, API GW HTTP, Lambda e IAM
+│       ├── lab03_bedrock_guardrails.tf      <- Bedrock Guardrail (Jailbreak, PII, Regex CPF)
+│       ├── lab04_rag_hardening.tf          <- Datasets S3 e Contextual Grounding
+│       ├── lab05_observability.tf           <- AWS X-Ray e Bedrock Logging
+│       ├── outputs.tf                       <- URLs e IDs de recursos gerados
+│       ├── tests/
+│       │   └── test_lab02_owasp_redteam.py  <- [LAB 02] Suíte de testes ofensivos automatizados
+│       └── README.md                        <- Guia de execução do Terraform
 ├── labs/
 │   ├── LAB01_Setup_and_Insecure_Chat.md     <- Guia passo a passo de deploy AWS
 │   ├── LAB02_OWASP_Top10_Exploitation.md   <- Roteiro com 6 ataques do OWASP Top 10
 │   ├── LAB03_Bedrock_Guardrails_Setup.md   <- Guia de criação de Bedrock Guardrails
 │   ├── LAB04_RAG_and_Data_Poisoning.md     <- Laboratório de RAG, Injeção Indireta e Grounding
-│   └── LAB05_Observability_XRay_ApplicationSignals.md <- Guia de Observabilidade GenAI com X-Ray e Application Signals
+│   ├── LAB05_Observability_XRay_ApplicationSignals.md <- Guia de Observabilidade GenAI
+│   └── LAB06_DevSecOps_Terraform_Guardrails.md <- Guia de DevSecOps, Terraform e Policy-as-Code
 └── datasets_poisoning/
     ├── politica_reembolso_legitima.txt      <- Documento corporativo limpo para testes RAG
     └── politica_reembolso_envenenada.txt    <- Documento com payload de injeção indireta oculta
