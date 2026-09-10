@@ -191,3 +191,8 @@ fields @timestamp, modelId, input.inputBodyJson.messages.0.content.0.text as Pro
 1. **Privacidade e LGPD:** Quando é seguro habilitar o *Model Invocation Logging* em produção? Como o *Bedrock Guardrails (mascaramento de PII)* protege os dados antes da gravação do log?
 2. **Impacto de Segurança:** Como o X-Ray e o CloudWatch ajudam a detectar ataques de *Denial of Wallet* (esgotamento de cota de tokens por requisições abusivas)?
 3. **Comparação de Ferramental:** Em quais cenários corporativos deve-se usar a pilha nativa da AWS (**X-Ray + Application Signals + Invocations**) versus ferramentas de terceiros como **Langfuse** ou **LangSmith**?
+
+---
+
+👉 **Próximo Laboratório:** [LAB 06 - DevSecOps para IA: Automação de Guardrails e Infraestrutura como Código (Terraform)](LAB06_DevSecOps_Terraform_Guardrails.md)
+

@@ -338,3 +338,8 @@ terraform destroy -auto-approve
 1. **Shift-Left em GenAI:** Qual a diferença entre detectar vulnerabilidades de IA em produção versus barrá-las na esteira de CI/CD através de testes automatizados de Red Teaming?
 2. **Imutabilidade e Versionamento:** Por que ambientes de produção devem apontar para um `aws_bedrock_guardrail_version` numérico específico ao invés da versão `DRAFT`?
 3. **Auditoria e Compliance:** Como o gerenciamento de Guardrails via código simplifica auditorias de conformidade (ex: SOC 2, ISO 27001 e LGPD)?
+
+---
+
+👉 **Próximo Laboratório:** [LAB 07 - FinOps para IA Generativa: Gestão, Estimativa e Monitoramento de Custos](LAB07_FinOps_GenAI_Cost_Management.md)
+

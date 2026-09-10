@@ -15,6 +15,8 @@ Cada arquivo `.tf` foi projetado para espelhar e automatizar um laboratório esp
 | **LAB 03** | [`lab03_bedrock_guardrails.tf`](lab03_bedrock_guardrails.tf) | **Policy as Code**: `aws_bedrock_guardrail` corporativo com Content Filters (Prompt Attack HIGH), Denied Topics, Mascaramento de PII (Cartão, E-mail) e Regex para CPF brasileiro (`Brazilian_CPF`), mais publicação de versão imutável. |
 | **LAB 04** | [`lab04_rag_hardening.tf`](lab04_rag_hardening.tf) | Bucket S3 de dados RAG, upload dos datasets (`politica_reembolso_legitima.txt` e `politica_reembolso_envenenada.txt`) e ativação de **Contextual Grounding Policy** no Guardrail. |
 | **LAB 05** | [`lab05_observability.tf`](lab05_observability.tf) | Rastreamento ativo (**AWS X-Ray** no Lambda), políticas IAM do **Application Signals**, CloudWatch Log Group `/aws/bedrock/modelinvocations` e **Bedrock Model Invocation Logging**. |
+| **LAB 07** | [`finops_cost_estimator.py`](finops_cost_estimator.py) | **Shift-Left FinOps**: Estimador pré-deploy que projeta custos de Tokenomics (Nova vs Llama) e infraestrutura serverless antes de aplicar o Terraform. |
+| **LAB 07** | [`finops_actual_tracker.py`](finops_actual_tracker.py) | **Post-Deploy FinOps**: Monitor de gastos reais acumulados que consulta a **AWS Cost Explorer API** e gera relatórios para terminal e CI/CD. |
 
 ---
 
@@ -96,11 +98,25 @@ terraform apply -auto-approve
 ```
 Abra a URL do S3 retornada no output `s3_website_url` para testar na interface visual e confira os rastreamentos no console do AWS CloudWatch / X-Ray!
 
+### Passo 5: FinOps para IA Generativa (LAB 07 - Gestão de Custos e Auditoria)
+
+1. **Estimativa Pré-Deploy (Shift-Left FinOps):**
+   ```powershell
+   python finops_cost_estimator.py
+   ```
+   Gera estimativas de custos da infraestrutura serverless e Tokenomics (Nova Micro vs Nova Lite vs Llama 3.1 vs Llama 3) para 1k, 10k e 100k requisições/mês.
+
+2. **Monitoramento Pós-Deploy (AWS Cost Explorer):**
+   ```powershell
+   python finops_actual_tracker.py
+   ```
+   Consulta a API do Cost Explorer em tempo real para exibir o gasto consolidado do mês vigente.
+
 ---
 
 ## 🤖 Esteira de DevSecOps com GitHub Actions
 
-O repositório inclui a pipeline automatizada [`.github/workflows/devsecops-ai-pipeline.yml`](../../.github/workflows/devsecops-ai-pipeline.yml) que implementa um **Security Quality Gate** contínuo.
+O repositório inclui a pipeline automatizada [`.github/workflows/devsecops-ai-pipeline.yml`](../../.github/workflows/devsecops-ai-pipeline.yml) que implementa um **Security Quality Gate** contínuo e governança **FinOps**.
 
 ### 🔑 Configuração de Secrets no GitHub
 Para habilitar a execução da pipeline:
@@ -110,7 +126,7 @@ Para habilitar a execução da pipeline:
    - `AWS_SECRET_ACCESS_KEY`: Chave secreta de acesso do IAM.
    - `AWS_REGION`: Região da AWS (ex: `us-east-1`).
 
-### 🔄 Como Funciona o Fluxo com Gate de Aprovação (Plan -> Approval -> Apply)
+### 🔄 Como Funciona o Fluxo com Gate de Aprovação e FinOps (Plan -> Approval -> Apply)
 ```
 [ Pull Request / Commit / Dispatch ]
                  │
@@ -120,15 +136,15 @@ Para habilitar a execução da pipeline:
 └────────────────┬────────────────┘
                  ▼
 ┌─────────────────────────────────┐
-│ 2. Terraform Plan               │  -> Gera o `tfplan`, exibe o resumo completo no Step Summary
-└────────────────┬────────────────┘     e faz upload do artefato do plano.
+│ 2. Terraform Plan + FinOps Est. │  -> Gera o `tfplan` e executa `finops_cost_estimator.py`
+└────────────────┬────────────────┘     com projeção de custos anexada ao Step Summary.
                  ▼
      ⏸️ GATE DE APROVAÇÃO MANUAL ⏸️  -> O GitHub pausa o workflow no environment `production`
                  │                      e aguarda o clique em "Review deployments" -> "Approve and deploy".
                  ▼ (Após Aprovação)
 ┌─────────────────────────────────┐
-│ 3. Terraform Apply              │  -> Executa estritamente o `tfplan` aprovado.
-└────────────────┬────────────────┘
+│ 3. Terraform Apply + FinOps Act.│  -> Aplica o plano e executa `finops_actual_tracker.py`
+└────────────────┬────────────────┘     reportando gastos reais consolidados via AWS Cost Explorer.
                  ▼
 ┌─────────────────────────────────┐
 │ 4. Red Team Security Gate       │  -> Dispara os 5 testes OWASP Top 10 (LAB 02) contra a API
@@ -137,6 +153,12 @@ Para habilitar a execução da pipeline:
                  ├── Se vulnerável (ex: sem Guardrail)? ──> ❌ BUILD FAIL (Bloqueia promoção)
                  └── Se protegido?                      ──> ✅ BUILD PASS (Relatório no Step Summary)
 ```
+
+### ⚡ Auditoria FinOps sob Demanda (Ação `finops-audit`)
+Você pode auditar gastos e estimativas a qualquer momento sem realizar alterações na nuvem:
+1. Vá em **Actions** > **DevSecOps GenAI Pipeline**.
+2. Clique em **Run workflow** > selecione a ação **`finops-audit`**.
+3. O pipeline executará o Job 6 e gerará a auditoria financeira completa no Step Summary.
 
 ### 🛡️ Configurando a Aprovação Manual no GitHub:
 1. No seu repositório GitHub, acesse **Settings** > **Environments**.
