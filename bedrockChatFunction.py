@@ -79,14 +79,11 @@ def lambda_handler(event, context):
                     rag_doc_loaded = True
                     rag_doc_name = rag_key
 
-                    effective_prompt = f"""Você é o Assistente Virtual Corporativo da TechFin Cloud.
-Responda à dúvida do colaborador utilizando as informações do documento oficial corporativo abaixo:
-
---- DOCUMENTO RECUPERADO DA BASE DE CONHECIMENTO S3 ({rag_key}) ---
+                    effective_prompt = f"""<context>
 {doc_content}
---- FIM DO DOCUMENTO RECUPERADO ---
+</context>
 
-Dúvida do Colaborador:
+Com base nas informações oficiais presentes em <context>, responda à dúvida do colaborador:
 {user_message}"""
 
                 except Exception as s3_err:
