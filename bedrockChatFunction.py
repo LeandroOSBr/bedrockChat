@@ -57,8 +57,8 @@ def lambda_handler(event, context):
             
             # Parâmetros para RAG no S3
             use_rag = body.get('useRag', False)
-            rag_bucket = body.get('ragBucket', DEFAULT_RAG_BUCKET)
-            rag_key = body.get('ragKey', DEFAULT_RAG_KEY)
+            rag_bucket = (body.get('ragBucket') or DEFAULT_RAG_BUCKET).strip()
+            rag_key = (body.get('ragKey') or DEFAULT_RAG_KEY).strip()
             
             rag_doc_loaded = False
             rag_doc_name = None
