@@ -125,6 +125,15 @@
         "arn:aws:logs:*:*:log-group:/aws/bedrock/modelinvocations*",
         "arn:aws:logs:*:*:log-group:/aws/lambda/techfin-bedrock-chat-*"
       ]
+    },
+    {
+      "Sid": "FinOpsCostExplorerAccess",
+      "Effect": "Allow",
+      "Action": [
+        "ce:GetCostAndUsage",
+        "ce:GetDimensionValues"
+      ],
+      "Resource": "*"
     }
   ]
 }

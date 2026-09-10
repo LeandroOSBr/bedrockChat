@@ -29,6 +29,7 @@ on:
           - "plan-only"
           - "destroy"
           - "red-team-only"
+          - "finops-audit"
       enable_guardrails:
         description: "Habilitar AWS Bedrock Guardrail (LAB 03)"
         required: true
@@ -69,6 +70,8 @@ jobs:
         run: |
           python -m py_compile bedrockChatFunction.py
           python -m py_compile deploy/terraform/tests/test_lab02_owasp_redteam.py
+          python -m py_compile deploy/terraform/finops_cost_estimator.py
+          python -m py_compile deploy/terraform/finops_actual_tracker.py
           echo "✔ Sintaxe Python validada com sucesso."
 
       - name: Configurar Terraform CLI
@@ -95,7 +98,7 @@ jobs:
     name: "2. Terraform Plan (Geração do Plano)"
     runs-on: ubuntu-latest
     needs: lint-and-validate
-    if: ${{ github.event_name != 'workflow_dispatch' || (github.event.inputs.action != 'destroy' && github.event.inputs.action != 'red-team-only') }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (github.event.inputs.action != 'destroy' && github.event.inputs.action != 'red-team-only' && github.event.inputs.action != 'finops-audit') }}
 
     steps:
       - name: Checkout do Repositório
@@ -191,6 +194,10 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "</details>" >> $GITHUB_STEP_SUMMARY
 
+      - name: Estimativa de Custos FinOps (Shift-Left Pre-Deploy)
+        run: |
+          python deploy/terraform/finops_cost_estimator.py --format markdown >> $GITHUB_STEP_SUMMARY
+
       - name: Salvar Artefatos do Plano (tfplan e zip)
         uses: actions/upload-artifact@v4
         with:
@@ -282,6 +289,11 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "> [!TIP]" >> $GITHUB_STEP_SUMMARY
           echo "> Para acessar a aplicação, clique no link do **Frontend Web** acima. O chat já vem pré-configurado para conectar ao endpoint da API e ao Guardrail recém-provisionados." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Monitoramento de Gastos Reais FinOps (AWS Cost Explorer)
+        run: |
+          python deploy/terraform/finops_actual_tracker.py --format markdown >> $GITHUB_STEP_SUMMARY
 
   # ============================================================================
   # JOB 4: Security Gate com Red Teaming Automatizado
@@ -343,3 +355,35 @@ jobs:
         run: |
           terraform -chdir=deploy/terraform destroy -auto-approve
           echo "### 🧹 Todos os recursos foram destruídos com sucesso na AWS!" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # JOB 6: Auditoria FinOps sob Demanda (AWS Cost Explorer)
+  # ============================================================================
+  finops-audit:
+    name: "Auditoria FinOps sob Demanda"
+    runs-on: ubuntu-latest
+    needs: lint-and-validate
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'finops-audit' }}
+
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Configurar Credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Executar Auditoria FinOps (Estimativas vs Gastos Reais)
+        run: |
+          echo "## 📊 Auditoria FinOps para IA Generativa (TechFin Cloud)" >> $GITHUB_STEP_SUMMARY
+          python deploy/terraform/finops_cost_estimator.py --format markdown >> $GITHUB_STEP_SUMMARY
+          python deploy/terraform/finops_actual_tracker.py --format markdown >> $GITHUB_STEP_SUMMARY
+

@@ -25,6 +25,10 @@ import subprocess
 import urllib.request
 import urllib.error
 
+# Suporte universal a UTF-8 no Windows e Linux
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
 # Cores ANSI para saída no terminal
 RESET = "\033[0m"
 BOLD = "\033[1m"

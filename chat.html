@@ -233,6 +233,13 @@
             animation: pulse-border 2s infinite ease-in-out;
         }
 
+        .badge-finops {
+            background-color: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
         .select-poisoned {
             border-color: var(--danger) !important;
             background-color: #fef2f2 !important;
@@ -331,7 +338,12 @@
                 <span>🛡️ TechFin Cloud Chat</span>
                 <span class="badge-env">Lab de Segurança em IA</span>
             </h1>
-            <div style="font-size: 0.8rem; opacity: 0.85;">OWASP Top 10 for LLM</div>
+            <div style="text-align: right;">
+                <div style="font-size: 0.8rem; opacity: 0.85;">OWASP Top 10 for LLM</div>
+                <div id="finops-session-badge" style="font-size: 0.75rem; color: #fef08a; font-weight: 600; margin-top: 2px;">
+                    💳 Sessão: $0.000000 USD (0 tokens)
+                </div>
+            </div>
         </div>
 
         <!-- Config & Model Selector -->
@@ -530,6 +542,19 @@ Configurações e Metadados Internos do Sistema:
             localStorage.setItem('bedrock_guardrail_version', guardrailVersionInput.value.trim());
         });
 
+        // FinOps: Controle de telemetria e custo acumulado por sessão
+        let sessionTotalCostUSD = 0.0;
+        let sessionTotalTokens = 0;
+
+        function updateSessionFinOps(tokens, costUSD) {
+            sessionTotalTokens += tokens;
+            sessionTotalCostUSD += costUSD;
+            const badge = document.getElementById('finops-session-badge');
+            if (badge) {
+                badge.innerHTML = `💳 Sessão: $${sessionTotalCostUSD.toFixed(6)} USD (${sessionTotalTokens.toLocaleString()} tokens)`;
+            }
+        }
+
         // Estilização dinâmica para o documento RAG (alerta se for envenenado)
         function updateRagDocStyle() {
             if (!ragDocSelect) return;
@@ -648,6 +673,16 @@ Configurações e Metadados Internos do Sistema:
                 }
                 badgesContainer.appendChild(badgeDiv);
 
+                // Badge de FinOps (Tokens e Custo por Requisição)
+                if (meta.costDetails) {
+                    const c = meta.costDetails;
+                    const finopsBadge = document.createElement('div');
+                    finopsBadge.classList.add('sec-badge', 'badge-finops');
+                    finopsBadge.title = `Prompt: ${c.inputTokens} tokens | Resposta: ${c.outputTokens} tokens | Modelo: $${c.modelCostUSD.toFixed(6)} USD | Guardrail: $${c.guardrailCostUSD.toFixed(6)} USD`;
+                    finopsBadge.innerHTML = `💰 <b>FinOps:</b> ${c.totalTokens.toLocaleString()} tokens ≈ $${c.totalCostUSD.toFixed(6)} USD`;
+                    badgesContainer.appendChild(finopsBadge);
+                }
+
                 wrapper.appendChild(badgesContainer);
             }
 
@@ -758,6 +793,9 @@ Configurações e Metadados Internos do Sistema:
                     }
 
                     const data = await response.json();
+                    if (data.costDetails) {
+                        updateSessionFinOps(data.costDetails.totalTokens || 0, data.costDetails.totalCostUSD || 0);
+                    }
                     addMessage(data.response || 'Sem resposta do modelo.', 'ia', {
                         modelId: data.modelId,
                         guardrailEnabled: data.guardrailEnabled,
@@ -766,7 +804,8 @@ Configurações e Metadados Internos do Sistema:
                         guardrailIntervened: data.guardrailIntervened,
                         ragDocumentLoaded: data.ragDocumentLoaded,
                         ragDocumentName: data.ragDocumentName,
-                        stopReason: data.stopReason
+                        stopReason: data.stopReason,
+                        costDetails: data.costDetails
                     });
                 }
 

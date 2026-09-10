@@ -22,6 +22,19 @@ CORS_HEADERS = {
     "Access-Control-Allow-Methods": "OPTIONS,POST"
 }
 
+# --- Tabela de Preços FinOps (Preços oficiais AWS Bedrock por 1.000 tokens e Guardrail por requisição) ---
+FINOPS_PRICING = {
+    "us.amazon.nova-micro-v1:0": {"input_1k": 0.000035, "output_1k": 0.000140},
+    "amazon.nova-micro-v1:0":    {"input_1k": 0.000035, "output_1k": 0.000140},
+    "us.amazon.nova-lite-v1:0":  {"input_1k": 0.000060, "output_1k": 0.000240},
+    "amazon.nova-lite-v1:0":     {"input_1k": 0.000060, "output_1k": 0.000240},
+    "us.meta.llama3-1-8b-instruct-v1:0": {"input_1k": 0.000220, "output_1k": 0.000220},
+    "meta.llama3-1-8b-instruct-v1:0":    {"input_1k": 0.000220, "output_1k": 0.000220},
+    "meta.llama3-8b-instruct-v1:0":      {"input_1k": 0.000300, "output_1k": 0.000600}
+}
+DEFAULT_MODEL_PRICING = {"input_1k": 0.000220, "output_1k": 0.000220}
+GUARDRAIL_COST_PER_CALL = 0.00075  # $0.75 por 1.000 avaliações de políticas de texto
+
 # --- System Prompt corporativo (representa uma aplicação real contendo metadados e sem guardrail nativo) ---
 SYSTEM_PROMPT = """Você é o Assistente Virtual Corporativo da empresa TechFin Cloud.
 Suas atribuições são ajudar clientes com dúvidas sobre serviços financeiros, investimentos e computação em nuvem.
@@ -159,6 +172,26 @@ Com base nas informações oficiais presentes em <context>, responda à dúvida 
             guardrail_intervened = (stop_reason == 'guardrail_intervened')
             guardrail_trace = response.get('trace', {}).get('guardrail', {}) if guardrail_intervened else None
 
+            # FinOps: Cálculo detalhado de consumo de tokens e custos estimados da inferência
+            usage = response.get('usage', {})
+            input_tokens = usage.get('inputTokens', 0)
+            output_tokens = usage.get('outputTokens', 0)
+            total_tokens = usage.get('totalTokens', input_tokens + output_tokens)
+
+            rates = FINOPS_PRICING.get(model_id, DEFAULT_MODEL_PRICING)
+            model_cost = (input_tokens / 1000.0) * rates["input_1k"] + (output_tokens / 1000.0) * rates["output_1k"]
+            guardrail_cost = GUARDRAIL_COST_PER_CALL if (use_guardrail and guardrail_id) else 0.0
+            total_cost = model_cost + guardrail_cost
+
+            cost_details = {
+                'inputTokens': input_tokens,
+                'outputTokens': output_tokens,
+                'totalTokens': total_tokens,
+                'modelCostUSD': round(model_cost, 7),
+                'guardrailCostUSD': round(guardrail_cost, 7),
+                'totalCostUSD': round(total_cost, 7)
+            }
+
             # Montagem da resposta para o Frontend
             response_payload = {
                 'response': model_response_text,
@@ -170,7 +203,8 @@ Com base nas informações oficiais presentes em <context>, responda à dúvida 
                 'guardrailIntervened': guardrail_intervened,
                 'ragDocumentLoaded': rag_doc_loaded,
                 'ragDocumentName': rag_doc_name,
-                'usage': response.get('usage', {})
+                'usage': usage,
+                'costDetails': cost_details
             }
 
             if guardrail_intervened:
