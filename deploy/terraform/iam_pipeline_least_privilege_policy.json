@@ -68,7 +68,8 @@
         "iam:GetRolePolicy",
         "iam:DeleteRolePolicy",
         "iam:ListAttachedRolePolicies",
-        "iam:ListRolePolicies"
+        "iam:ListRolePolicies",
+        "iam:ListInstanceProfilesForRole"
       ],
       "Resource": [
         "arn:aws:iam::*:role/techfin-bedrock-chat-*",
